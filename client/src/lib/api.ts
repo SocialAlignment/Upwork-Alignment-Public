@@ -108,3 +108,26 @@ export async function getGallerySuggestions(
 
   return response.json();
 }
+
+export async function getProcessSuggestions(
+  analysisData: any, 
+  projectIdea: string, 
+  projectTitle: string,
+  projectCategory: string,
+  pricingData?: any
+) {
+  const response = await fetch("/api/process-suggestions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ analysisData, projectIdea, projectTitle, projectCategory, pricingData }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to get process suggestions");
+  }
+
+  return response.json();
+}

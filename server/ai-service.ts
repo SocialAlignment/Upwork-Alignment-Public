@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { InsertAnalysisResult, AnalysisResult, ProjectSuggestion, PricingSuggestion, GallerySuggestion } from "@shared/schema";
+import type { InsertAnalysisResult, AnalysisResult, ProjectSuggestion, PricingSuggestion, GallerySuggestion, ProcessSuggestion } from "@shared/schema";
 import { level1Categories, getLevel2Categories, getLevel3Categories, hasLevel3 } from "@shared/upwork-categories";
 
 const anthropic = new Anthropic();
@@ -692,5 +692,142 @@ Return ONLY valid JSON, no additional text.`;
     },
     sampleDocuments: parsed.sampleDocuments || [],
     galleryStrategy: parsed.galleryStrategy || "",
+  };
+}
+
+export async function generateProcessSuggestions(
+  analysisData: AnalysisResult,
+  projectIdea: string,
+  projectTitle: string,
+  projectCategory: string,
+  pricingData?: {
+    use3Tiers: boolean;
+    tiers: {
+      starter: { title: string; description: string; deliveryDays: number; price: number } | null;
+      standard: { title: string; description: string; deliveryDays: number; price: number };
+      advanced: { title: string; description: string; deliveryDays: number; price: number } | null;
+    };
+    serviceOptions?: { name: string; starterIncluded: boolean; standardIncluded: boolean; advancedIncluded: boolean }[];
+    addOns?: { name: string; price: number }[];
+  }
+): Promise<ProcessSuggestion> {
+  const pricingSection = pricingData ? `
+PRICING TIERS (Context for deliverables and timelines):
+${pricingData.tiers.starter ? `- Starter: "${pricingData.tiers.starter.title}" - $${pricingData.tiers.starter.price} (${pricingData.tiers.starter.deliveryDays} days) - ${pricingData.tiers.starter.description}` : ""}
+- Standard: "${pricingData.tiers.standard.title}" - $${pricingData.tiers.standard.price} (${pricingData.tiers.standard.deliveryDays} days) - ${pricingData.tiers.standard.description}
+${pricingData.tiers.advanced ? `- Advanced: "${pricingData.tiers.advanced.title}" - $${pricingData.tiers.advanced.price} (${pricingData.tiers.advanced.deliveryDays} days) - ${pricingData.tiers.advanced.description}` : ""}
+${pricingData.serviceOptions && pricingData.serviceOptions.length > 0 ? `
+SERVICE OPTIONS:
+${pricingData.serviceOptions.map(opt => `- ${opt.name}`).join("\n")}` : ""}
+${pricingData.addOns && pricingData.addOns.length > 0 ? `
+ADD-ONS:
+${pricingData.addOns.map(addon => `- ${addon.name}: +$${addon.price}`).join("\n")}` : ""}
+` : "";
+
+  const projectsSection = analysisData.projects && analysisData.projects.length > 0 
+    ? `PAST PROJECT EXPERIENCE (Reference for typical workflow):
+${analysisData.projects.map((p: { name: string; type: string }) => `- ${p.name} (${p.type})`).join("\n")}`
+    : "";
+
+  const prompt = `You are an expert Upwork project consultant. Generate requirements and process steps for a freelancer's project listing.
+
+PROJECT DETAILS:
+- Title: ${projectTitle}
+- Category: ${projectCategory}
+- Description: ${projectIdea}
+${pricingSection}
+FREELANCER PROFILE:
+- Archetype: ${analysisData.archetype}
+- Core Skills: ${analysisData.skills.join(", ")}
+- Proficiency Level: ${analysisData.proficiency}%
+- Target Client: ${analysisData.clientGap}
+- Strategic Position: ${analysisData.suggestedPivot}
+${projectsSection}
+
+UPWORK REQUIREMENTS BEST PRACTICES:
+- Requirements should ask for information the freelancer GENUINELY needs before starting work
+- Be specific: "Brand guidelines document" is better than "Project details"
+- Include file formats when relevant (PSD, PDF, CSV, etc.)
+- Mark truly blocking items as "required" (client must answer before work begins)
+- Keep requirements concise (max 350 characters each)
+- Aim for 3-5 requirements that reduce back-and-forth communication
+- Requirements should reflect the archetype's professional workflow
+
+UPWORK PROCESS STEPS BEST PRACTICES:
+- Steps should show clients exactly how the project will unfold
+- Use action verbs: "Review," "Design," "Develop," "Test," "Deliver"
+- Include milestones that give clients visibility into progress
+- Match step complexity to the tier structure (more steps for advanced tiers)
+- Step titles should be clear (max 75 characters)
+- Descriptions are optional but helpful for complex steps
+- Aim for 4-6 steps that build client confidence
+
+Generate contextual requirements and steps in this JSON format:
+{
+  "requirements": [
+    {
+      "text": "Specific information or file the freelancer needs (max 350 chars)",
+      "isRequired": true/false (true = client MUST provide before work starts),
+      "rationale": "Why this information is needed for THIS specific project type"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Clear action-oriented step title (max 75 chars)",
+      "description": "Optional detailed description of what happens in this step (max 250 chars)",
+      "estimatedDuration": "Optional: e.g., '1-2 days' or 'Day 1-3'",
+      "rationale": "Why this step matters for THIS project and client type"
+    }
+  ],
+  "processStrategy": "2-3 sentence explanation of how this process flow builds client confidence and reduces friction",
+  "clientCommunicationTip": "One specific tip for communicating with ${analysisData.clientGap} during this project type"
+}
+
+IMPORTANT GUIDELINES:
+- Requirements must be SPECIFIC to this project type (${projectCategory}), not generic
+- Steps must reflect the freelancer's actual expertise: ${analysisData.skills.slice(0, 3).join(", ")}
+- Consider the target client type (${analysisData.clientGap}) when phrasing requirements
+- If pricing tiers are provided, align step complexity to the standard tier deliverables
+- Use professional but accessible language (avoid jargon unless it's industry-standard)
+- Generate 3-5 requirements and 4-6 steps
+- Each requirement and step must have a clear rationale showing contextual relevance
+
+Return ONLY valid JSON, no additional text.`;
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2000,
+    temperature: 0,
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+  });
+
+  const content = message.content[0];
+  if (content.type !== "text") {
+    throw new Error("Unexpected response type from AI");
+  }
+
+  const result = content.text;
+  const jsonMatch = result.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("No valid JSON found in AI response");
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (parseError) {
+    throw new Error("AI response contained invalid JSON format");
+  }
+
+  return {
+    requirements: parsed.requirements || [],
+    steps: parsed.steps || [],
+    processStrategy: parsed.processStrategy || "",
+    clientCommunicationTip: parsed.clientCommunicationTip || "",
   };
 }
