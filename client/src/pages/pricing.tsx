@@ -664,6 +664,34 @@ export default function Pricing() {
                   className="gap-2"
                   disabled={isLoading || (use3Tiers ? !starterPrice || !standardPrice || !advancedPrice : !standardPrice)}
                   onClick={() => {
+                    const pricingSelections = {
+                      use3Tiers,
+                      tiers: {
+                        starter: use3Tiers ? {
+                          title: starterTitle,
+                          description: starterDesc,
+                          deliveryDays: starterDays,
+                          price: starterPrice
+                        } : null,
+                        standard: {
+                          title: standardTitle,
+                          description: standardDesc,
+                          deliveryDays: standardDays,
+                          price: standardPrice
+                        },
+                        advanced: use3Tiers ? {
+                          title: advancedTitle,
+                          description: advancedDesc,
+                          deliveryDays: advancedDays,
+                          price: advancedPrice
+                        } : null
+                      },
+                      serviceOptions: serviceOptions.filter(opt => 
+                        opt.starterIncluded || opt.standardIncluded || opt.advancedIncluded
+                      ),
+                      addOns: addOns.filter(addon => addon.enabled)
+                    };
+                    sessionStorage.setItem("pricingSelections", JSON.stringify(pricingSelections));
                     sessionStorage.removeItem("gallerySuggestions");
                     navigate("/gallery");
                   }}
