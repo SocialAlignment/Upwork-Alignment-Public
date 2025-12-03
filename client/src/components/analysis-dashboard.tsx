@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { 
   Brain, 
@@ -14,23 +15,48 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { EditAnalysisDialog, type AnalysisData } from "./edit-analysis-dialog";
 
 interface AnalysisDashboardProps {
   onContinue: () => void;
 }
 
+const DEFAULT_DATA: AnalysisData = {
+  archetype: "Senior Full Stack Engineer",
+  proficiency: 92,
+  skills: ["React", "TypeScript", "Node.js", "System Architecture", "API Design", "AWS"],
+  projects: [
+    { name: "E-commerce Platform Migration", type: "Enterprise" },
+    { name: "Real-time Analytics Dashboard", type: "SaaS" },
+  ],
+  gapTitle: "High-Value Gap Detected",
+  gapDescription: "Your profile emphasizes 'Development' but misses 'Consultancy' keywords that drive 30% higher rates.",
+  suggestedPivot: "Position as 'Technical Partner' rather than just 'Developer'",
+  missingSkillCluster: "Missing Skill Cluster",
+  missingSkill: "AI Integration",
+  missingSkillDesc: "High demand for 'LLM Integration' in your stack.",
+  clientGapType: "Client Type Gap",
+  clientGap: "FinTech",
+  clientGapDesc: "Your security exp. is perfect for high-paying FinTech roles.",
+  recommendedKeywords: ["Scalability Strategy", "Technical Leadership", "RAG Implementation", "Cloud Cost Optimization", "SOC2 Compliance"]
+};
+
 export function AnalysisDashboard({ onContinue }: AnalysisDashboardProps) {
+  const [data, setData] = useState<AnalysisData>(DEFAULT_DATA);
+
   return (
     <div className="w-full max-w-5xl mx-auto space-y-8" data-testid="analysis-dashboard">
-      <div className="text-center space-y-2 mb-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold border border-green-200 dark:border-green-800">
-          <Check className="w-3 h-3" /> Analysis Complete
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
+        <div className="text-center md:text-left space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold border border-green-200 dark:border-green-800">
+            <Check className="w-3 h-3" /> Analysis Complete
+          </div>
+          <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground">Profile Intelligence Report</h2>
+          <p className="text-muted-foreground max-w-2xl">
+            We've analyzed your inputs against top-performing Upwork profiles in your niche. 
+          </p>
         </div>
-        <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground">Profile Intelligence Report</h2>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          We've analyzed your inputs against top-performing Upwork profiles in your niche. 
-          Here is your core identity and the strategic opportunities you might be missing.
-        </p>
+        <EditAnalysisDialog data={data} onSave={setData} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -57,15 +83,15 @@ export function AnalysisDashboard({ onContinue }: AnalysisDashboardProps) {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between mb-4">
-                <span className="text-2xl font-bold text-foreground">Senior Full Stack Engineer</span>
+                <span className="text-2xl font-bold text-foreground">{data.archetype}</span>
                 <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Top 5%</Badge>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                   <span>Technical Proficiency</span>
-                  <span className="font-medium">92%</span>
+                  <span className="font-medium">{data.proficiency}%</span>
                 </div>
-                <Progress value={92} className="h-1.5 bg-blue-200 dark:bg-blue-900/40" />
+                <Progress value={data.proficiency} className="h-1.5 bg-blue-200 dark:bg-blue-900/40" />
               </div>
             </CardContent>
           </Card>
@@ -76,7 +102,7 @@ export function AnalysisDashboard({ onContinue }: AnalysisDashboardProps) {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {["React", "TypeScript", "Node.js", "System Architecture", "API Design", "AWS"].map((skill) => (
+                {data.skills.map((skill) => (
                   <Badge key={skill} variant="outline" className="bg-background/50">
                     {skill}
                   </Badge>
@@ -90,10 +116,7 @@ export function AnalysisDashboard({ onContinue }: AnalysisDashboardProps) {
               <CardTitle className="text-base font-medium">Project History Highlights</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {[
-                { name: "E-commerce Platform Migration", type: "Enterprise" },
-                { name: "Real-time Analytics Dashboard", type: "SaaS" },
-              ].map((project, i) => (
+              {data.projects.map((project, i) => (
                 <div key={i} className="flex items-center gap-3 p-2 rounded-md hover:bg-secondary/50 transition-colors">
                   <Briefcase className="w-4 h-4 text-muted-foreground" />
                   <div className="flex-1">
@@ -130,17 +153,17 @@ export function AnalysisDashboard({ onContinue }: AnalysisDashboardProps) {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
                 <AlertTriangle className="w-4 h-4" />
-                High-Value Gap Detected
+                {data.gapTitle}
               </CardTitle>
               <CardDescription className="text-amber-700/80 dark:text-amber-400/80">
-                Your profile emphasizes "Development" but misses "Consultancy" keywords that drive 30% higher rates.
+                {data.gapDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="p-3 bg-white/60 dark:bg-black/20 rounded-lg border border-amber-100 dark:border-amber-800/30">
                   <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Suggested Pivot</p>
-                  <p className="text-sm font-medium">Position as "Technical Partner" rather than just "Developer"</p>
+                  <p className="text-sm font-medium">{data.suggestedPivot}</p>
                 </div>
               </div>
             </CardContent>
@@ -151,13 +174,13 @@ export function AnalysisDashboard({ onContinue }: AnalysisDashboardProps) {
               <CardContent className="pt-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground font-medium uppercase">Missing Skill Cluster</p>
-                    <h4 className="font-bold text-lg mt-1">AI Integration</h4>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">{data.missingSkillCluster}</p>
+                    <h4 className="font-bold text-lg mt-1">{data.missingSkill}</h4>
                   </div>
                   <TrendingUp className="w-4 h-4 text-purple-500" />
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  High demand for "LLM Integration" in your stack.
+                  {data.missingSkillDesc}
                 </p>
               </CardContent>
             </Card>
@@ -166,13 +189,13 @@ export function AnalysisDashboard({ onContinue }: AnalysisDashboardProps) {
               <CardContent className="pt-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground font-medium uppercase">Client Type Gap</p>
-                    <h4 className="font-bold text-lg mt-1">FinTech</h4>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">{data.clientGapType}</p>
+                    <h4 className="font-bold text-lg mt-1">{data.clientGap}</h4>
                   </div>
                   <Users className="w-4 h-4 text-indigo-500" />
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Your security exp. is perfect for high-paying FinTech roles.
+                  {data.clientGapDesc}
                 </p>
               </CardContent>
             </Card>
@@ -184,7 +207,7 @@ export function AnalysisDashboard({ onContinue }: AnalysisDashboardProps) {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {["Scalability Strategy", "Technical Leadership", "RAG Implementation", "Cloud Cost Optimization", "SOC2 Compliance"].map((keyword) => (
+                {data.recommendedKeywords.map((keyword) => (
                   <Badge key={keyword} variant="secondary" className="bg-green-50 text-green-700 hover:bg-green-100 border-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/30 cursor-pointer transition-colors">
                     + {keyword}
                   </Badge>
