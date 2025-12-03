@@ -46,3 +46,20 @@ export async function getTitleBestPractices() {
   const response = await fetch("/api/upwork-knowledge/title-best-practices");
   return response.json();
 }
+
+export async function getProjectSuggestions(analysisData: any) {
+  const response = await fetch("/api/project-suggestions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(analysisData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to get project suggestions");
+  }
+
+  return response.json();
+}

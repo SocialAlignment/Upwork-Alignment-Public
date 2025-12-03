@@ -61,3 +61,27 @@ export type AnalysisResult = typeof analysisResults.$inferSelect;
 
 export type InsertUpworkKnowledge = z.infer<typeof insertUpworkKnowledgeSchema>;
 export type UpworkKnowledge = typeof upworkKnowledge.$inferSelect;
+
+export interface ProjectSuggestion {
+  titles: Array<{
+    text: string;
+    rationale: string;
+    confidence: number;
+  }>;
+  categories: Array<{
+    level1: string;
+    level2: string;
+    level3?: string;
+    rationale: string;
+    confidence: number;
+  }>;
+  attributes: Record<string, {
+    recommended: string[];
+    rationale: string;
+  }>;
+  searchTags: Array<{
+    tag: string;
+    rationale: string;
+  }>;
+  marketInsights: string;
+}

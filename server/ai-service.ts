@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { InsertAnalysisResult } from "@shared/schema";
+import type { InsertAnalysisResult, AnalysisResult, ProjectSuggestion } from "@shared/schema";
+import { level1Categories, getLevel2Categories, getLevel3Categories, hasLevel3 } from "@shared/upwork-categories";
 
 const anthropic = new Anthropic();
 
@@ -139,4 +140,127 @@ export async function searchUpworkInsights(query: string): Promise<string> {
 
   const data = await response.json();
   return data.choices[0].message.content;
+}
+
+export async function generateProjectSuggestions(
+  analysisData: AnalysisResult
+): Promise<ProjectSuggestion> {
+  const marketResearchQuery = `What are the current best practices for Upwork project catalog listings in ${analysisData.archetype} category? 
+  Focus on:
+  1. What project titles are getting the most client interest?
+  2. Which categories and subcategories have highest demand for ${analysisData.skills.slice(0, 3).join(", ")} skills?
+  3. What search tags and keywords are clients using to find ${analysisData.archetype} freelancers?
+  4. What differentiates top-performing project listings from average ones?
+  Please provide specific, actionable insights based on current Upwork trends.`;
+
+  let marketInsights = "";
+  try {
+    marketInsights = await searchUpworkInsights(marketResearchQuery);
+  } catch (error) {
+    console.error("Perplexity market research failed:", error);
+    marketInsights = "Market research unavailable - using general best practices.";
+  }
+
+  const availableCategories = level1Categories.map(l1 => {
+    const l2s = getLevel2Categories(l1);
+    return `${l1}: ${l2s.slice(0, 5).join(", ")}${l2s.length > 5 ? '...' : ''}`;
+  }).join("\n");
+
+  const prompt = `You are an expert Upwork project optimization consultant. Based on the freelancer's profile analysis and current market research, generate optimized project catalog suggestions.
+
+FREELANCER PROFILE:
+- Archetype: ${analysisData.archetype}
+- Proficiency: ${analysisData.proficiency}%
+- Core Skills: ${analysisData.skills.join(", ")}
+- Project Experience: ${analysisData.projects.map(p => `${p.name} (${p.type})`).join(", ")}
+- Recommended Keywords: ${analysisData.recommendedKeywords.join(", ")}
+- Strategic Gap: ${analysisData.gapTitle} - ${analysisData.gapDescription}
+- Suggested Pivot: ${analysisData.suggestedPivot}
+- Target Client: ${analysisData.clientGap}
+
+CURRENT MARKET RESEARCH:
+${marketInsights}
+
+AVAILABLE UPWORK CATEGORIES:
+${availableCategories}
+
+Generate optimized project suggestions in this JSON format:
+{
+  "titles": [
+    {
+      "text": "A compelling 7-12 word project title that sells the outcome to clients (max 75 chars)",
+      "rationale": "Why this title works based on their profile and market trends",
+      "confidence": 0.95
+    }
+  ],
+  "categories": [
+    {
+      "level1": "Development & IT",
+      "level2": "Web Programming",
+      "level3": "Web Application Programming",
+      "rationale": "Why this category matches their expertise and market demand",
+      "confidence": 0.9
+    }
+  ],
+  "attributes": {
+    "categorySpecificAttribute": {
+      "recommended": ["Option1", "Option2"],
+      "rationale": "Why these attributes are recommended"
+    }
+  },
+  "searchTags": [
+    {
+      "tag": "keyword",
+      "rationale": "Why this tag will attract ideal clients"
+    }
+  ],
+  "marketInsights": "A 2-3 sentence summary of key market insights for this freelancer"
+}
+
+IMPORTANT:
+- Generate 3 title options, ranked by effectiveness
+- Suggest 2-3 category paths that match their skills
+- Recommend 5 high-impact search tags
+- Titles MUST be 7+ words and under 75 characters
+- Focus on client outcomes, not freelancer capabilities
+- Use the market research to inform your suggestions
+
+Return ONLY valid JSON, no additional text.`;
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2048,
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+  });
+
+  const content = message.content[0];
+  if (content.type !== "text") {
+    throw new Error("Unexpected response type from AI");
+  }
+
+  const result = content.text;
+  const jsonMatch = result.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("No valid JSON found in AI response");
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (parseError) {
+    throw new Error("AI response contained invalid JSON format");
+  }
+
+  return {
+    titles: parsed.titles || [],
+    categories: parsed.categories || [],
+    attributes: parsed.attributes || {},
+    searchTags: parsed.searchTags || [],
+    marketInsights: parsed.marketInsights || marketInsights,
+  };
 }

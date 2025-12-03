@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import * as pdfParse from "pdf-parse";
-import { analyzeProfile } from "./ai-service";
+import { analyzeProfile, generateProjectSuggestions } from "./ai-service";
 import { UPWORK_CATEGORIES, PROJECT_ATTRIBUTES, TITLE_BEST_PRACTICES } from "./upwork-knowledge";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -117,6 +117,31 @@ export async function registerRoutes(
 
   app.get("/api/upwork-knowledge/title-best-practices", async (req, res) => {
     res.json(TITLE_BEST_PRACTICES);
+  });
+
+  app.post("/api/project-suggestions", async (req, res) => {
+    try {
+      const analysisData = req.body;
+      
+      if (!analysisData || !analysisData.archetype) {
+        return res.status(400).json({ error: "Analysis data is required" });
+      }
+
+      const suggestions = await generateProjectSuggestions(analysisData);
+      res.json(suggestions);
+    } catch (error: any) {
+      console.error("Error generating project suggestions:", error);
+      
+      if (error.message?.includes("JSON")) {
+        return res.status(500).json({ 
+          error: "AI returned an unexpected format. Please try again." 
+        });
+      }
+      
+      res.status(500).json({ 
+        error: "Failed to generate suggestions. Please try again." 
+      });
+    }
   });
 
   return httpServer;

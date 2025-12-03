@@ -20,9 +20,10 @@ export default function Home() {
   const { toast } = useToast();
 
   const handleContinue = (action: "enhance" | "project") => {
-    if (action === "project") {
+    if (action === "project" && analysisResult) {
+      sessionStorage.setItem("analysisData", JSON.stringify(analysisResult));
       navigate("/project-creation");
-    } else {
+    } else if (action === "enhance") {
       toast({
         title: "Coming Soon",
         description: "Profile enhancement features are under development.",
