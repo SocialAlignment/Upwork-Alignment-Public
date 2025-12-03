@@ -193,7 +193,7 @@ export async function registerRoutes(
 
   app.post("/api/gallery-suggestions", async (req, res) => {
     try {
-      const { analysisData, projectIdea, projectTitle, projectCategory } = req.body;
+      const { analysisData, projectIdea, projectTitle, projectCategory, pricingData } = req.body;
       
       if (!analysisData || !analysisData.archetype) {
         return res.status(400).json({ error: "Analysis data is required" });
@@ -211,7 +211,8 @@ export async function registerRoutes(
         analysisData, 
         projectIdea, 
         projectTitle,
-        projectCategory || "General"
+        projectCategory || "General",
+        pricingData
       );
       res.json(suggestions);
     } catch (error: any) {

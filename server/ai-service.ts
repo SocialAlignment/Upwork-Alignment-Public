@@ -459,15 +459,35 @@ export async function generateGallerySuggestions(
   analysisData: AnalysisResult,
   projectIdea: string,
   projectTitle: string,
-  projectCategory: string
+  projectCategory: string,
+  pricingData?: {
+    use3Tiers: boolean;
+    tiers: {
+      starter: { title: string; description: string; deliveryDays: number; price: number } | null;
+      standard: { title: string; description: string; deliveryDays: number; price: number };
+      advanced: { title: string; description: string; deliveryDays: number; price: number } | null;
+    };
+    serviceOptions?: { name: string; starterIncluded: boolean; standardIncluded: boolean; advancedIncluded: boolean }[];
+    addOns?: { name: string; price: number }[];
+  }
 ): Promise<GallerySuggestion> {
+  const pricingSection = pricingData ? `
+PRICING TIERS (User has set these exact prices - you MUST reference these specific prices in video script and content):
+${pricingData.tiers.starter ? `- Starter: "${pricingData.tiers.starter.title}" - $${pricingData.tiers.starter.price} (${pricingData.tiers.starter.deliveryDays} days) - ${pricingData.tiers.starter.description}` : ""}
+- Standard: "${pricingData.tiers.standard.title}" - $${pricingData.tiers.standard.price} (${pricingData.tiers.standard.deliveryDays} days) - ${pricingData.tiers.standard.description}
+${pricingData.tiers.advanced ? `- Advanced: "${pricingData.tiers.advanced.title}" - $${pricingData.tiers.advanced.price} (${pricingData.tiers.advanced.deliveryDays} days) - ${pricingData.tiers.advanced.description}` : ""}
+${pricingData.addOns && pricingData.addOns.length > 0 ? `
+ADD-ONS AVAILABLE:
+${pricingData.addOns.map(addon => `- ${addon.name}: +$${addon.price}`).join("\n")}` : ""}
+` : "";
+
   const prompt = `You are an expert Upwork project marketing strategist. Generate compelling gallery content for a freelancer's project listing.
 
 PROJECT DETAILS:
 - Title: ${projectTitle}
 - Category: ${projectCategory}
 - Description: ${projectIdea}
-
+${pricingSection}
 FREELANCER PROFILE:
 - Archetype: ${analysisData.archetype}
 - Core Skills: ${analysisData.skills.join(", ")}
@@ -525,6 +545,8 @@ Generate comprehensive gallery content in this JSON format:
 IMPORTANT GUIDELINES:
 - Thumbnail prompt should be specific and ready to paste into Gemini/DALL-E/Midjourney
 - Video script should be conversational and under 90 seconds total
+- CRITICAL: If pricing tiers are provided above, the video script MUST mention the EXACT prices (e.g., "Starting at $${pricingData?.tiers?.starter?.price || pricingData?.tiers?.standard?.price || 'X'}"). Do NOT invent different prices.
+- The video script should reference the actual tier names and prices the user selected
 - Suggest 2-3 sample documents that demonstrate expertise
 - Focus on client outcomes and benefits, not just features
 - Make content professional yet approachable
