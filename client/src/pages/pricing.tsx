@@ -767,24 +767,28 @@ export default function Pricing() {
                   onClick={() => {
                     const pricingSelections = {
                       use3Tiers,
+                      targetHourlyRate,
                       tiers: {
                         starter: use3Tiers ? {
                           title: starterTitle,
                           description: starterDesc,
                           deliveryDays: starterDays,
-                          price: starterPrice
+                          price: starterPrice,
+                          estimatedHours: starterHours
                         } : null,
                         standard: {
                           title: standardTitle,
                           description: standardDesc,
                           deliveryDays: standardDays,
-                          price: standardPrice
+                          price: standardPrice,
+                          estimatedHours: standardHours
                         },
                         advanced: use3Tiers ? {
                           title: advancedTitle,
                           description: advancedDesc,
                           deliveryDays: advancedDays,
-                          price: advancedPrice
+                          price: advancedPrice,
+                          estimatedHours: advancedHours
                         } : null
                       },
                       serviceOptions: serviceOptions.filter(opt => 

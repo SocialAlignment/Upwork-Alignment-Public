@@ -281,7 +281,7 @@ export default function Description() {
     };
     sessionStorage.setItem("descriptionData", JSON.stringify(descriptionData));
     
-    navigate("/review");
+    navigate("/export");
   };
   
   const isValidSummary = projectSummary.length >= 120 && projectSummary.length <= 1200;
