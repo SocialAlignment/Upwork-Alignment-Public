@@ -19,7 +19,7 @@ import { EditAnalysisDialog, type AnalysisData } from "./edit-analysis-dialog";
 
 interface AnalysisDashboardProps {
   initialData: any;
-  onContinue: () => void;
+  onContinue: (action: "enhance" | "project") => void;
 }
 
 export function AnalysisDashboard({ initialData, onContinue }: AnalysisDashboardProps) {
@@ -214,13 +214,24 @@ export function AnalysisDashboard({ initialData, onContinue }: AnalysisDashboard
         </motion.div>
       </div>
 
-      <div className="flex justify-center pt-8">
+      <div className="flex flex-col sm:flex-row justify-center gap-4 pt-8">
+        <Button 
+          size="lg" 
+          variant="outline"
+          className="h-14 px-8 text-lg border-2 rounded-full"
+          onClick={() => onContinue("enhance")}
+          data-testid="button-enhance-profile"
+        >
+          <TrendingUp className="mr-2 w-5 h-5" />
+          Enhance Profile
+        </Button>
         <Button 
           size="lg" 
           className="h-14 px-8 text-lg bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 rounded-full"
-          onClick={onContinue}
+          onClick={() => onContinue("project")}
+          data-testid="button-start-project"
         >
-          Proceed to Project Generation <ArrowUpRight className="ml-2 w-5 h-5" />
+          Start Upwork Project <ArrowUpRight className="ml-2 w-5 h-5" />
         </Button>
       </div>
     </div>

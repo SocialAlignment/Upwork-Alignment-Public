@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { FileUpload } from "@/components/file-upload";
 import { ProfileForm } from "@/components/profile-form";
 import { AnalysisLoader } from "@/components/analysis-loader";
@@ -12,10 +13,22 @@ import type { AnalysisResult } from "@shared/schema";
 type ViewState = "input" | "analyzing" | "results";
 
 export default function Home() {
+  const [, navigate] = useLocation();
   const [file, setFile] = useState<File | null>(null);
   const [viewState, setViewState] = useState<ViewState>("input");
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const { toast } = useToast();
+
+  const handleContinue = (action: "enhance" | "project") => {
+    if (action === "project") {
+      navigate("/project-creation");
+    } else {
+      toast({
+        title: "Coming Soon",
+        description: "Profile enhancement features are under development.",
+      });
+    }
+  };
 
   const handleFormSubmit = async (data: { upworkUrl: string; linkedinUrl: string }) => {
     if (!file) {
@@ -150,7 +163,7 @@ export default function Home() {
             >
               <AnalysisDashboard 
                 initialData={analysisResult}
-                onContinue={() => console.log("Continue to next step")} 
+                onContinue={handleContinue} 
               />
             </motion.div>
           )}
