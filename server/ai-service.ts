@@ -11,15 +11,33 @@ interface ProfileData {
 }
 
 export async function analyzeProfile(profileData: ProfileData): Promise<Omit<InsertAnalysisResult, 'profileId'>> {
+  const resumeSnippet = profileData.resumeText.slice(0, 1500);
+  
+  let marketContext = "";
+  try {
+    marketContext = await searchUpworkInsights(
+      `Identify the top 3 high-value freelancer archetypes and common client complaints for a professional with this experience: ${resumeSnippet}`
+    );
+  } catch (error) {
+    console.error("Market research failed, continuing without context:", error);
+    marketContext = "";
+  }
+
+  const marketSection = marketContext 
+    ? `LIVE MARKET RESEARCH (Current Upwork trends and insights):
+${marketContext}
+
+` : '';
+
   const prompt = `You are an expert Upwork freelancer consultant. Analyze the following professional profile data and provide strategic insights.
 
-RESUME CONTENT:
+${marketSection}RESUME CONTENT:
 ${profileData.resumeText}
 
 UPWORK PROFILE: ${profileData.upworkUrl}
 LINKEDIN PROFILE: ${profileData.linkedinUrl}
 
-Based on this information, provide a comprehensive analysis in the following JSON format:
+Based on the profile data${marketContext ? ' and market research' : ''}, provide a comprehensive analysis in the following JSON format:
 
 {
   "archetype": "A short professional title/archetype (e.g., 'Senior Full Stack Engineer', 'Technical Content Strategist')",
@@ -37,7 +55,8 @@ Based on this information, provide a comprehensive analysis in the following JSO
   "clientGapType": "Label for client type category",
   "clientGap": "A specific client vertical/industry they should target",
   "clientGapDesc": "Why their background fits this client type (1 sentence)",
-  "recommendedKeywords": ["Array of 5-7 high-value keywords to add to their Upwork profile"]
+  "recommendedKeywords": ["Array of 5-7 high-value keywords to add to their Upwork profile"],
+  "signatureMechanism": "A unique, branded name for their proprietary process or methodology, e.g., 'The 4-Phase Growth Protocol', 'The Rapid MVP Framework', 'The Client-First Discovery System'. This should sound professional, memorable, and differentiate them from competitors."
 }
 
 IMPORTANT: 
@@ -45,13 +64,14 @@ IMPORTANT:
 - Base insights on actual resume content
 - Focus on high-value market positioning
 - Recommend keywords that command premium rates
-- Identify genuine blindspots based on market research
+- Identify genuine blindspots in their positioning
+- The signatureMechanism should be unique and branded to this specific freelancer's expertise
 
 Return ONLY valid JSON, no additional text.`;
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
-    max_tokens: 1024,
+    max_tokens: 1500,
     temperature: 0,
     messages: [
       {
@@ -108,6 +128,7 @@ Return ONLY valid JSON, no additional text.`;
     clientGap: parsed.clientGap,
     clientGapDesc: parsed.clientGapDesc,
     recommendedKeywords: parsed.recommendedKeywords,
+    signatureMechanism: parsed.signatureMechanism || `The ${parsed.archetype} Framework`,
   };
 }
 
@@ -140,7 +161,36 @@ export async function searchUpworkInsights(query: string): Promise<string> {
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
+  const content = data.choices?.[0]?.message?.content;
+  
+  if (!content) {
+    throw new Error("Perplexity API returned empty content");
+  }
+  
+  if (typeof content === 'string') {
+    return content;
+  }
+  
+  if (Array.isArray(content)) {
+    const textParts = content
+      .map((item: any) => {
+        if (typeof item === 'string') return item;
+        if (item?.text) return item.text;
+        return null;
+      })
+      .filter(Boolean);
+    
+    if (textParts.length === 0) {
+      throw new Error("Perplexity API returned no usable text content");
+    }
+    return textParts.join('\n');
+  }
+  
+  if (typeof content === 'object' && content.text) {
+    return content.text;
+  }
+  
+  throw new Error("Perplexity API returned unexpected content format");
 }
 
 export async function generateProjectSuggestions(
@@ -165,7 +215,7 @@ export async function generateProjectSuggestions(
     marketInsights = await searchUpworkInsights(marketResearchQuery);
   } catch (error) {
     console.error("Perplexity market research failed:", error);
-    marketInsights = "Market research unavailable - using general best practices.";
+    marketInsights = "";
   }
 
   const availableCategories = level1Categories.map(l1 => {
@@ -173,7 +223,13 @@ export async function generateProjectSuggestions(
     return `${l1}: ${l2s.slice(0, 5).join(", ")}${l2s.length > 5 ? '...' : ''}`;
   }).join("\n");
 
-  const prompt = `You are an expert Upwork project optimization consultant. Based on the freelancer's project idea, profile analysis, and current market research, generate optimized project catalog suggestions.
+  const marketSection = marketInsights 
+    ? `CURRENT MARKET RESEARCH:
+${marketInsights}
+
+` : '';
+
+  const prompt = `You are an expert Upwork project optimization consultant. Based on the freelancer's project idea and profile analysis${marketInsights ? ', along with current market research' : ''}, generate optimized project catalog suggestions.
 
 PROJECT IDEA FROM FREELANCER:
 ${projectIdea}
@@ -188,10 +244,7 @@ FREELANCER PROFILE:
 - Suggested Pivot: ${analysisData.suggestedPivot}
 - Target Client: ${analysisData.clientGap}
 
-CURRENT MARKET RESEARCH:
-${marketInsights}
-
-AVAILABLE UPWORK CATEGORIES (YOU MUST SELECT FROM THESE EXACT OPTIONS):
+${marketSection}AVAILABLE UPWORK CATEGORIES (YOU MUST SELECT FROM THESE EXACT OPTIONS):
 ${availableCategories}
 
 Generate optimized project suggestions in this JSON format:
@@ -233,7 +286,7 @@ IMPORTANT:
 - Recommend 5 high-impact search tags
 - Titles MUST be 7+ words and under 75 characters
 - Focus on client outcomes, not freelancer capabilities
-- Use the market research to inform your suggestions
+- Base suggestions on the freelancer's actual skills and experience
 
 Return ONLY valid JSON, no additional text.`;
 
@@ -303,10 +356,16 @@ export async function generatePricingSuggestions(
     pricingInsights = await searchUpworkInsights(pricingResearchQuery);
   } catch (error) {
     console.error("Perplexity pricing research failed:", error);
-    pricingInsights = "Pricing research unavailable - using general best practices.";
+    pricingInsights = "";
   }
 
-  const prompt = `You are an expert Upwork pricing strategist. Based on the freelancer's profile, project, and current market research, generate optimal pricing tier recommendations.
+  const marketSection = pricingInsights 
+    ? `CURRENT MARKET RESEARCH:
+${pricingInsights}
+
+` : '';
+
+  const prompt = `You are an expert Upwork pricing strategist. Based on the freelancer's profile and project${pricingInsights ? ', along with current market research' : ''}, generate optimal pricing tier recommendations.
 
 PROJECT DETAILS:
 - Title: ${projectTitle}
@@ -320,10 +379,7 @@ FREELANCER PROFILE:
 - Target Client: ${analysisData.clientGap}
 - Strategic Position: ${analysisData.suggestedPivot}
 
-CURRENT MARKET RESEARCH:
-${pricingInsights}
-
-Generate a comprehensive 3-tier pricing structure in this JSON format:
+${marketSection}Generate a comprehensive 3-tier pricing structure in this JSON format:
 {
   "tiers": {
     "starter": {

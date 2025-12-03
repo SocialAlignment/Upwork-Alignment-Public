@@ -29,6 +29,7 @@ export interface AnalysisData {
   clientGap: string;
   clientGapDesc: string;
   recommendedKeywords: string[];
+  signatureMechanism: string;
 }
 
 interface EditAnalysisDialogProps {
@@ -86,6 +87,15 @@ export function EditAnalysisDialog({ data, onSave }: EditAnalysisDialogProps) {
                 value={formData.skills.join(", ")} 
                 onChange={(e) => setFormData({...formData, skills: e.target.value.split(",").map(s => s.trim())})} 
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Signature Mechanism</Label>
+              <Input 
+                value={formData.signatureMechanism || ""} 
+                onChange={(e) => setFormData({...formData, signatureMechanism: e.target.value})} 
+                placeholder="e.g., 'The 4-Phase Growth Protocol'"
+              />
+              <p className="text-xs text-muted-foreground">Your unique, branded name for your proprietary process</p>
             </div>
           </div>
 

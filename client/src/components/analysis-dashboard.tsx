@@ -9,7 +9,8 @@ import {
   Lightbulb,
   ArrowUpRight,
   Briefcase,
-  Users
+  Users,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,7 @@ export function AnalysisDashboard({ initialData, onContinue }: AnalysisDashboard
     clientGap: initialData.clientGap,
     clientGapDesc: initialData.clientGapDesc,
     recommendedKeywords: initialData.recommendedKeywords,
+    signatureMechanism: initialData.signatureMechanism || "",
   });
 
   return (
@@ -91,6 +93,25 @@ export function AnalysisDashboard({ initialData, onContinue }: AnalysisDashboard
               </div>
             </CardContent>
           </Card>
+
+          {data.signatureMechanism && (
+            <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium text-purple-700 dark:text-purple-300 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Your Signature Mechanism
+                </CardTitle>
+                <CardDescription className="text-purple-600/80 dark:text-purple-400/80">
+                  Your unique, branded process that differentiates you
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="p-3 bg-white/60 dark:bg-black/20 rounded-lg border border-purple-100 dark:border-purple-800/30">
+                  <p className="text-lg font-bold text-purple-800 dark:text-purple-200">{data.signatureMechanism}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="pb-3">

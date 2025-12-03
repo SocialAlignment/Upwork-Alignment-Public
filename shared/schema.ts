@@ -28,6 +28,7 @@ export const analysisResults = pgTable("analysis_results", {
   clientGap: text("client_gap").notNull(),
   clientGapDesc: text("client_gap_desc").notNull(),
   recommendedKeywords: jsonb("recommended_keywords").notNull().$type<string[]>(),
+  signatureMechanism: text("signature_mechanism").notNull().default(""),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
