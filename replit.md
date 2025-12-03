@@ -105,6 +105,15 @@ The gallery video script generation follows a comprehensive tone of voice framew
 - Each document includes "dataEvidence" field referencing specific skills or projects from resume
 - Suggestions are tailored to freelancer's archetype and target client type
 
+**Pricing Engine with Profitability Protection**
+- AI estimates labor hours for each pricing tier with detailed rationale
+- Target hourly rate input (default $100/hr) allows freelancers to set their sustainable rate
+- Profitability badges compare effective rate (price/hours) against target rate:
+  - Green "Sustainable" badge when effectiveRate >= targetHourlyRate
+  - Orange "Low Margin" badge when effectiveRate < targetHourlyRate or hours is 0
+- High-margin add-ons section suggests items with high client value but under 30 mins fulfillment time
+- Prevents freelancer burnout by making effort vs. compensation visible at a glance
+
 ## External Dependencies
 
 ### Third-Party Services
