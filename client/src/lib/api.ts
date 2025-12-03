@@ -47,13 +47,13 @@ export async function getTitleBestPractices() {
   return response.json();
 }
 
-export async function getProjectSuggestions(analysisData: any) {
+export async function getProjectSuggestions(analysisData: any, projectIdea: string) {
   const response = await fetch("/api/project-suggestions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(analysisData),
+    body: JSON.stringify({ analysisData, projectIdea }),
   });
 
   if (!response.ok) {

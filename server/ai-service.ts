@@ -143,15 +143,21 @@ export async function searchUpworkInsights(query: string): Promise<string> {
 }
 
 export async function generateProjectSuggestions(
-  analysisData: AnalysisResult
+  analysisData: AnalysisResult,
+  projectIdea: string
 ): Promise<ProjectSuggestion> {
-  const marketResearchQuery = `What are the current best practices for Upwork project catalog listings in ${analysisData.archetype} category? 
+  const marketResearchQuery = `What are the current best practices for Upwork project catalog listings related to: "${projectIdea.slice(0, 200)}"
+  
+  For a freelancer with these skills: ${analysisData.skills.slice(0, 3).join(", ")}
+  
   Focus on:
-  1. What project titles are getting the most client interest?
-  2. Which categories and subcategories have highest demand for ${analysisData.skills.slice(0, 3).join(", ")} skills?
-  3. What search tags and keywords are clients using to find ${analysisData.archetype} freelancers?
+  1. What project titles are getting the most client interest for similar services?
+  2. Which Upwork categories and subcategories have highest demand for this type of work?
+  3. What search tags and keywords are clients using to find this type of service?
   4. What differentiates top-performing project listings from average ones?
-  Please provide specific, actionable insights based on current Upwork trends.`;
+  5. Any specific examples of successful project titles in this space?
+  
+  Please provide specific, actionable insights with examples based on current Upwork trends.`;
 
   let marketInsights = "";
   try {
@@ -166,13 +172,16 @@ export async function generateProjectSuggestions(
     return `${l1}: ${l2s.slice(0, 5).join(", ")}${l2s.length > 5 ? '...' : ''}`;
   }).join("\n");
 
-  const prompt = `You are an expert Upwork project optimization consultant. Based on the freelancer's profile analysis and current market research, generate optimized project catalog suggestions.
+  const prompt = `You are an expert Upwork project optimization consultant. Based on the freelancer's project idea, profile analysis, and current market research, generate optimized project catalog suggestions.
+
+PROJECT IDEA FROM FREELANCER:
+${projectIdea}
 
 FREELANCER PROFILE:
 - Archetype: ${analysisData.archetype}
 - Proficiency: ${analysisData.proficiency}%
 - Core Skills: ${analysisData.skills.join(", ")}
-- Project Experience: ${analysisData.projects.map(p => `${p.name} (${p.type})`).join(", ")}
+- Project Experience: ${analysisData.projects.map((p: { name: string; type: string }) => `${p.name} (${p.type})`).join(", ")}
 - Recommended Keywords: ${analysisData.recommendedKeywords.join(", ")}
 - Strategic Gap: ${analysisData.gapTitle} - ${analysisData.gapDescription}
 - Suggested Pivot: ${analysisData.suggestedPivot}
@@ -181,7 +190,7 @@ FREELANCER PROFILE:
 CURRENT MARKET RESEARCH:
 ${marketInsights}
 
-AVAILABLE UPWORK CATEGORIES:
+AVAILABLE UPWORK CATEGORIES (YOU MUST SELECT FROM THESE EXACT OPTIONS):
 ${availableCategories}
 
 Generate optimized project suggestions in this JSON format:

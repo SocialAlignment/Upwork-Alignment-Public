@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -8,11 +8,13 @@ import {
   AlertCircle,
   X,
   Sparkles,
+  RefreshCw,
+  ChevronRight,
   Lightbulb,
-  TrendingUp,
   Target,
   Zap,
-  RefreshCw
+  Quote,
+  Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,40 +23,51 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  level1Categories,
-  getLevel2Categories,
-  getLevel3Categories,
-  hasLevel3,
   getProjectAttributes,
   type ProjectAttribute,
 } from "@shared/upwork-categories";
 import { getProjectSuggestions } from "@/lib/api";
 import type { AnalysisResult, ProjectSuggestion } from "@shared/schema";
 
+interface TitleSuggestion {
+  text: string;
+  rationale: string;
+  confidence: number;
+}
+
+interface CategorySuggestion {
+  level1: string;
+  level2: string;
+  level3?: string;
+  rationale: string;
+  confidence: number;
+}
+
+interface TagSuggestion {
+  tag: string;
+  rationale: string;
+}
+
 export default function ProjectCreation() {
   const [, navigate] = useLocation();
   const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(null);
+  const [projectIdea, setProjectIdea] = useState("");
   const [suggestions, setSuggestions] = useState<ProjectSuggestion | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [title, setTitle] = useState("");
-  const [level1, setLevel1] = useState("");
-  const [level2, setLevel2] = useState("");
-  const [level3, setLevel3] = useState("");
+  const [selectedTitleIndex, setSelectedTitleIndex] = useState(0);
+  const [selectedCategoryIndex, setSelectedCategoryIndex] = useState(0);
+  const [customTitle, setCustomTitle] = useState("");
   const [searchTags, setSearchTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string[]>>({});
@@ -62,44 +75,53 @@ export default function ProjectCreation() {
   const [projectAttributes, setProjectAttributes] = useState<ProjectAttribute[]>([]);
 
   useEffect(() => {
-    const storedData = sessionStorage.getItem("analysisData");
-    if (storedData) {
-      try {
-        const parsed = JSON.parse(storedData);
-        setAnalysisData(parsed);
-        fetchSuggestions(parsed);
-      } catch (e) {
-        setError("Failed to load profile data. Please go back and try again.");
-        setIsLoading(false);
-      }
-    } else {
-      setError("No profile data found. Please complete the analysis first.");
+    const storedAnalysis = sessionStorage.getItem("analysisData");
+    const storedIdea = sessionStorage.getItem("projectIdea");
+    
+    if (!storedAnalysis || !storedIdea) {
+      setError("Missing profile data or project idea. Please start from the beginning.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const parsedAnalysis = JSON.parse(storedAnalysis);
+      setAnalysisData(parsedAnalysis);
+      setProjectIdea(storedIdea);
+      fetchSuggestions(parsedAnalysis, storedIdea);
+    } catch (e) {
+      setError("Failed to load data. Please go back and try again.");
       setIsLoading(false);
     }
   }, []);
 
-  const fetchSuggestions = async (data: AnalysisResult) => {
+  const fetchSuggestions = async (data: AnalysisResult, idea: string) => {
     try {
       setIsLoading(true);
       setError(null);
-      const result = await getProjectSuggestions(data);
-      setSuggestions(result);
+      const result = await getProjectSuggestions(data, idea);
       
-      if (result.titles?.length > 0) {
-        setTitle(result.titles[0].text);
+      const validatedResult: ProjectSuggestion = {
+        titles: Array.isArray(result.titles) 
+          ? result.titles.filter((t: any) => t && typeof t.text === 'string')
+          : [],
+        categories: Array.isArray(result.categories)
+          ? result.categories.filter((c: any) => c && typeof c.level1 === 'string' && typeof c.level2 === 'string')
+          : [],
+        attributes: result.attributes || {},
+        searchTags: Array.isArray(result.searchTags)
+          ? result.searchTags.filter((t: any) => t && typeof t.tag === 'string')
+          : [],
+        marketInsights: result.marketInsights || "Market insights unavailable.",
+      };
+      
+      setSuggestions(validatedResult);
+      
+      if (validatedResult.titles.length > 0) {
+        setCustomTitle(validatedResult.titles[0].text);
       }
-      if (result.categories?.length > 0) {
-        const cat = result.categories[0];
-        setLevel1(cat.level1);
-        setTimeout(() => {
-          setLevel2(cat.level2);
-          if (cat.level3) {
-            setTimeout(() => setLevel3(cat.level3!), 100);
-          }
-        }, 100);
-      }
-      if (result.searchTags?.length > 0) {
-        setSearchTags(result.searchTags.slice(0, 5).map((t: { tag: string; rationale: string }) => t.tag));
+      if (validatedResult.searchTags.length > 0) {
+        setSearchTags(validatedResult.searchTags.slice(0, 5).map((t) => t.tag));
       }
     } catch (e: any) {
       setError(e.message || "Failed to generate suggestions. Please try again.");
@@ -108,31 +130,32 @@ export default function ProjectCreation() {
     }
   };
 
+  const handleRegenerate = () => {
+    if (analysisData && projectIdea) {
+      fetchSuggestions(analysisData, projectIdea);
+    }
+  };
+
+  const selectedCategory = suggestions?.categories?.[selectedCategoryIndex];
+
   useEffect(() => {
-    if (level1 && level2) {
-      const attrs = getProjectAttributes(level1, level2, level3 || undefined);
+    if (selectedCategory) {
+      const attrs = getProjectAttributes(
+        selectedCategory.level1, 
+        selectedCategory.level2, 
+        selectedCategory.level3 || undefined
+      );
       setProjectAttributes(attrs);
+      setSelectedAttributes({});
     } else {
       setProjectAttributes([]);
     }
-  }, [level1, level2, level3]);
+  }, [selectedCategory]);
 
-  const wordCount = title.trim().split(/\s+/).filter(Boolean).length;
-  const charCount = title.length;
+  const selectedTitle = suggestions?.titles?.[selectedTitleIndex];
+  const wordCount = customTitle.trim().split(/\s+/).filter(Boolean).length;
+  const charCount = customTitle.length;
   const titleValid = wordCount >= 7 && charCount <= 75;
-
-  const handleLevel1Change = (value: string) => {
-    setLevel1(value);
-    setLevel2("");
-    setLevel3("");
-    setSelectedAttributes({});
-  };
-
-  const handleLevel2Change = (value: string) => {
-    setLevel2(value);
-    setLevel3("");
-    setSelectedAttributes({});
-  };
 
   const handleAddTag = () => {
     if (tagInput.trim() && searchTags.length < 5 && !searchTags.includes(tagInput.trim())) {
@@ -164,34 +187,11 @@ export default function ProjectCreation() {
     });
   };
 
-  const applySuggestion = (type: "title" | "category" | "tag", index: number) => {
-    if (!suggestions) return;
-    
-    if (type === "title" && suggestions.titles[index]) {
-      setTitle(suggestions.titles[index].text);
-    } else if (type === "category" && suggestions.categories[index]) {
-      const cat = suggestions.categories[index];
-      setLevel1(cat.level1);
-      setTimeout(() => {
-        setLevel2(cat.level2);
-        if (cat.level3) {
-          setTimeout(() => setLevel3(cat.level3!), 100);
-        }
-      }, 100);
-    } else if (type === "tag" && suggestions.searchTags[index]) {
-      const tag = suggestions.searchTags[index].tag;
-      if (!searchTags.includes(tag) && searchTags.length < 5) {
-        setSearchTags([...searchTags, tag]);
-      }
+  const addSuggestedTag = (tag: string) => {
+    if (!searchTags.includes(tag) && searchTags.length < 5) {
+      setSearchTags([...searchTags, tag]);
     }
   };
-
-  const getCategoryDisplay = () => {
-    const parts = [level1, level2, level3].filter(Boolean);
-    return parts.join(" > ");
-  };
-
-  const showLevel3Dropdown = level1 && level2 && hasLevel3(level1, level2);
 
   if (error && !analysisData) {
     return (
@@ -203,7 +203,7 @@ export default function ProjectCreation() {
             <p className="text-muted-foreground mb-4">{error}</p>
             <Button onClick={() => navigate("/")} data-testid="button-go-home">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Go Back
+              Start Over
             </Button>
           </CardContent>
         </Card>
@@ -218,18 +218,29 @@ export default function ProjectCreation() {
           <div className="flex items-center justify-between">
             <Button 
               variant="ghost" 
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/project-idea")}
               className="gap-2"
               data-testid="button-back"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Dashboard
+              Edit Project Idea
             </Button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Badge variant="secondary" className="gap-1">
                 <Sparkles className="w-3 h-3" />
-                AI-Powered
+                Step 2 of 2
               </Badge>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={isLoading}
+                className="gap-2"
+                data-testid="button-regenerate"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                Regenerate
+              </Button>
             </div>
           </div>
         </div>
@@ -244,174 +255,158 @@ export default function ProjectCreation() {
             >
               <div className="mb-6">
                 <h1 className="text-3xl font-serif font-bold text-foreground mb-2">
-                  Create Your Upwork Project
+                  AI-Optimized Project Suggestions
                 </h1>
                 <p className="text-muted-foreground">
-                  AI-optimized suggestions based on your profile and current market trends
+                  Based on your project idea and market research. Select options or customize.
                 </p>
               </div>
 
               {isLoading ? (
                 <Card>
                   <CardContent className="pt-6 space-y-6">
-                    <div className="space-y-3">
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-12 w-full" />
-                    </div>
-                    <div className="space-y-3">
-                      <Skeleton className="h-4 w-32" />
-                      <div className="grid grid-cols-3 gap-3">
-                        <Skeleton className="h-10" />
-                        <Skeleton className="h-10" />
-                        <Skeleton className="h-10" />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-center py-8">
+                    <div className="flex items-center justify-center py-12">
                       <div className="text-center">
-                        <RefreshCw className="w-8 h-8 text-primary animate-spin mx-auto mb-3" />
+                        <RefreshCw className="w-10 h-10 text-primary animate-spin mx-auto mb-4" />
+                        <p className="font-medium mb-1">Researching Upwork Market...</p>
                         <p className="text-sm text-muted-foreground">
-                          Researching market trends and generating suggestions...
+                          Analyzing trends and generating optimized suggestions
                         </p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               ) : (
-                <Card>
-                  <CardContent className="pt-6 space-y-8">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="title" className="text-base font-medium">Project Title</Label>
-                        <span className={`text-xs ${charCount > 75 || wordCount < 7 ? "text-red-500" : "text-muted-foreground"}`}>
-                          {charCount}/75 characters (min. 7 words)
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Tell the client what you will deliver and how it benefits them.
-                      </p>
-                      <Input
-                        id="title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="You will get a fantastic deliverable that drives impact"
-                        className="h-12 text-base"
-                        data-testid="input-project-title"
-                      />
-                      {!titleValid && title.length > 0 && (
-                        <p className="text-xs text-red-500 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          Please enter a title with at least 7 words and no more than 75 characters.
-                        </p>
-                      )}
-                      
-                      {suggestions?.titles && suggestions.titles.length > 1 && (
-                        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
-                          <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-2 flex items-center gap-1">
-                            <Lightbulb className="w-3 h-3" />
-                            Alternative AI Suggestions
-                          </p>
-                          <div className="space-y-2">
-                            {suggestions.titles.slice(1).map((t, idx) => (
-                              <button
-                                key={idx}
-                                onClick={() => applySuggestion("title", idx + 1)}
-                                className="w-full text-left p-2 text-sm rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors group"
-                                data-testid={`button-apply-title-${idx + 1}`}
-                              >
-                                <span className="font-medium">{t.text}</span>
-                                <span className="text-xs text-muted-foreground block mt-0.5">{t.rationale}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label className="text-base font-medium">Category</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Select a category so it's easy for clients to find your project.
-                      </p>
-                      
-                      {getCategoryDisplay() && (
-                        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                          <div className="flex items-center gap-2">
-                            <Check className="w-4 h-4 text-green-600" />
-                            <span className="text-sm font-medium">{getCategoryDisplay()}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <Select value={level1} onValueChange={handleLevel1Change}>
-                          <SelectTrigger data-testid="select-category-level1">
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {level1Categories.map((cat) => (
-                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-
-                        <Select 
-                          value={level2} 
-                          onValueChange={handleLevel2Change}
-                          disabled={!level1}
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2">
+                        <Lightbulb className="w-5 h-5 text-amber-500" />
+                        Project Title
+                      </CardTitle>
+                      <CardDescription>
+                        Select a suggested title or customize your own
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {suggestions?.titles?.map((title: TitleSuggestion, idx: number) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setSelectedTitleIndex(idx);
+                            setCustomTitle(title.text);
+                          }}
+                          className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                            selectedTitleIndex === idx 
+                              ? "border-primary bg-primary/5" 
+                              : "border-transparent bg-slate-50 dark:bg-slate-800/50 hover:border-slate-300"
+                          }`}
+                          data-testid={`button-select-title-${idx}`}
                         >
-                          <SelectTrigger data-testid="select-category-level2">
-                            <SelectValue placeholder="Select subcategory" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {getLevel2Categories(level1).map((cat) => (
-                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <p className="font-medium mb-1">{title.text}</p>
+                              <p className="text-sm text-muted-foreground">{title.rationale}</p>
+                            </div>
+                            {selectedTitleIndex === idx && (
+                              <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                            )}
+                          </div>
+                          <div className="mt-2 flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {Math.round((title.confidence || 0.9) * 100)}% match
+                            </Badge>
+                          </div>
+                        </button>
+                      ))}
 
-                        {showLevel3Dropdown && (
-                          <Select value={level3} onValueChange={setLevel3}>
-                            <SelectTrigger data-testid="select-category-level3">
-                              <SelectValue placeholder="Select specialty" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getLevel3Categories(level1, level2).map((cat) => (
-                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="customTitle">Customize Title</Label>
+                          <span className={`text-xs ${charCount > 75 || wordCount < 7 ? "text-red-500" : "text-green-600"}`}>
+                            {charCount}/75 chars, {wordCount} words
+                          </span>
+                        </div>
+                        <Input
+                          id="customTitle"
+                          value={customTitle}
+                          onChange={(e) => setCustomTitle(e.target.value)}
+                          placeholder="Edit your title here..."
+                          className="h-11"
+                          data-testid="input-custom-title"
+                        />
+                        {!titleValid && customTitle.length > 0 && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            Title needs 7+ words and max 75 characters
+                          </p>
                         )}
                       </div>
+                    </CardContent>
+                  </Card>
 
-                      {suggestions?.categories && suggestions.categories.length > 1 && (
-                        <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
-                          <p className="text-xs font-medium text-purple-700 dark:text-purple-300 mb-2 flex items-center gap-1">
-                            <Target className="w-3 h-3" />
-                            Other Recommended Categories
-                          </p>
-                          <div className="space-y-2">
-                            {suggestions.categories.slice(1).map((cat, idx) => (
-                              <button
-                                key={idx}
-                                onClick={() => applySuggestion("category", idx + 1)}
-                                className="w-full text-left p-2 text-sm rounded hover:bg-purple-100 dark:hover:bg-purple-800/30 transition-colors"
-                                data-testid={`button-apply-category-${idx + 1}`}
-                              >
-                                <span className="font-medium">
-                                  {[cat.level1, cat.level2, cat.level3].filter(Boolean).join(" > ")}
-                                </span>
-                                <span className="text-xs text-muted-foreground block mt-0.5">{cat.rationale}</span>
-                              </button>
-                            ))}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2">
+                        <Target className="w-5 h-5 text-blue-500" />
+                        Category Selection
+                      </CardTitle>
+                      <CardDescription>
+                        Categories are selected from Upwork's taxonomy based on your project
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {suggestions?.categories?.map((cat: CategorySuggestion, idx: number) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedCategoryIndex(idx)}
+                          className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                            selectedCategoryIndex === idx 
+                              ? "border-primary bg-primary/5" 
+                              : "border-transparent bg-slate-50 dark:bg-slate-800/50 hover:border-slate-300"
+                          }`}
+                          data-testid={`button-select-category-${idx}`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-1 text-sm font-medium mb-2">
+                                <span>{cat.level1}</span>
+                                <ChevronRight className="w-3 h-3" />
+                                <span>{cat.level2}</span>
+                                {cat.level3 && (
+                                  <>
+                                    <ChevronRight className="w-3 h-3" />
+                                    <span>{cat.level3}</span>
+                                  </>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">{cat.rationale}</p>
+                            </div>
+                            {selectedCategoryIndex === idx && (
+                              <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                            )}
                           </div>
-                        </div>
-                      )}
-                    </div>
+                          <div className="mt-2">
+                            <Badge variant="outline" className="text-xs">
+                              {Math.round((cat.confidence || 0.85) * 100)}% recommended
+                            </Badge>
+                          </div>
+                        </button>
+                      ))}
+                    </CardContent>
+                  </Card>
 
-                    {projectAttributes.length > 0 && (
-                      <div className="space-y-6 pt-4 border-t">
-                        <h3 className="text-lg font-semibold">Project Attributes</h3>
-                        
+                  {projectAttributes.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle>Project Attributes</CardTitle>
+                        <CardDescription>
+                          Required attributes for your selected category
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
                         {projectAttributes.map((attr) => {
                           const selected = selectedAttributes[attr.name] || [];
                           const hasError = attr.required && selected.length === 0;
@@ -451,25 +446,28 @@ export default function ProjectCreation() {
                             </div>
                           );
                         })}
-                      </div>
-                    )}
+                      </CardContent>
+                    </Card>
+                  )}
 
-                    <div className="space-y-3 pt-4 border-t">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-base font-medium">Search Tags</Label>
-                        <span className="text-xs text-muted-foreground">{searchTags.length}/5 tags</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Tags help clients find your project. Press Enter to add custom tags.
-                      </p>
-                      
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-amber-500" />
+                        Search Tags
+                      </CardTitle>
+                      <CardDescription>
+                        Tags help clients find your project. Add up to 5 tags.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                       {searchTags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        <div className="flex flex-wrap gap-2">
                           {searchTags.map((tag) => (
                             <Badge 
                               key={tag} 
                               variant="secondary"
-                              className="gap-1 pr-1 bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+                              className="gap-1 pr-1 bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400"
                             >
                               {tag}
                               <button
@@ -484,44 +482,59 @@ export default function ProjectCreation() {
                         </div>
                       )}
 
-                      <Input
-                        value={tagInput}
-                        onChange={(e) => setTagInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Add a search tag..."
-                        className="h-10"
-                        disabled={searchTags.length >= 5}
-                        data-testid="input-search-tags"
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          value={tagInput}
+                          onChange={(e) => setTagInput(e.target.value)}
+                          onKeyDown={handleKeyDown}
+                          placeholder="Add a custom tag..."
+                          className="flex-1"
+                          disabled={searchTags.length >= 5}
+                          data-testid="input-search-tags"
+                        />
+                        <Button 
+                          variant="outline" 
+                          onClick={handleAddTag}
+                          disabled={searchTags.length >= 5 || !tagInput.trim()}
+                        >
+                          Add
+                        </Button>
+                      </div>
 
                       {suggestions?.searchTags && (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {suggestions.searchTags
-                            .filter(t => !searchTags.includes(t.tag))
-                            .slice(0, 5)
-                            .map((t, idx) => (
-                              <Tooltip key={idx}>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    onClick={() => applySuggestion("tag", suggestions.searchTags.findIndex(st => st.tag === t.tag))}
-                                    className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 transition-colors"
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">AI Suggested Tags:</p>
+                          <div className="space-y-2">
+                            {suggestions.searchTags
+                              .filter((t: TagSuggestion) => !searchTags.includes(t.tag))
+                              .slice(0, 5)
+                              .map((t: TagSuggestion, idx: number) => (
+                                <div 
+                                  key={idx}
+                                  className="flex items-start justify-between gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800"
+                                >
+                                  <div className="flex-1">
+                                    <p className="font-medium text-sm">{t.tag}</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">{t.rationale}</p>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => addSuggestedTag(t.tag)}
                                     disabled={searchTags.length >= 5}
-                                    data-testid={`button-add-suggested-tag-${t.tag}`}
+                                    className="flex-shrink-0"
+                                    data-testid={`button-add-tag-${t.tag}`}
                                   >
-                                    <Zap className="w-3 h-3" />
-                                    + {t.tag}
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="max-w-xs text-xs">{t.rationale}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            ))}
+                                    + Add
+                                  </Button>
+                                </div>
+                              ))}
+                          </div>
                         </div>
                       )}
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </div>
               )}
 
               <div className="flex items-center justify-between pt-4">
@@ -530,7 +543,7 @@ export default function ProjectCreation() {
                 </Button>
                 <Button 
                   className="gap-2"
-                  disabled={!titleValid || !level1 || !level2 || isLoading}
+                  disabled={!titleValid || !selectedCategory || isLoading}
                   data-testid="button-save-continue"
                 >
                   Continue to Pricing
@@ -540,77 +553,114 @@ export default function ProjectCreation() {
             </motion.div>
           </div>
 
-          <div className="lg:col-span-1 space-y-6">
-            <Card className="sticky top-24">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-primary" />
-                  Market Insights
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {isLoading ? (
-                  <div className="space-y-3">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-4 w-5/6" />
-                  </div>
-                ) : suggestions?.marketInsights ? (
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {suggestions.marketInsights}
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Market insights will appear after analysis completes.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {analysisData && (
+          <div className="lg:col-span-1">
+            <div className="sticky top-24 space-y-4">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Your Profile</CardTitle>
-                  <CardDescription>Used for AI suggestions</CardDescription>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Info className="w-5 h-5 text-primary" />
+                    Market Research Insights
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase font-medium">Archetype</p>
-                    <p className="text-sm font-medium">{analysisData.archetype}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase font-medium">Core Skills</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {analysisData.skills.slice(0, 4).map((skill) => (
-                        <Badge key={skill} variant="outline" className="text-xs">
-                          {skill}
-                        </Badge>
-                      ))}
+                <CardContent>
+                  {isLoading ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-5/6" />
                     </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase font-medium">Target Client</p>
-                    <p className="text-sm">{analysisData.clientGap}</p>
+                  ) : suggestions?.marketInsights ? (
+                    <div className="prose prose-sm dark:prose-invert">
+                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                        {suggestions.marketInsights}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Market insights will appear here once analysis is complete.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {selectedTitle && !isLoading && (
+                <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Quote className="w-4 h-4 text-amber-600" />
+                      Why This Title Works
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedTitle.rationale}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {selectedCategory && !isLoading && (
+                <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Target className="w-4 h-4 text-blue-600" />
+                      Why This Category
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedCategory.rationale}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {analysisData && (
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="profile" className="border rounded-lg px-4">
+                    <AccordionTrigger className="text-sm font-medium py-3">
+                      Your Profile Summary
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-4 space-y-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase">Archetype</p>
+                        <p className="text-sm font-medium">{analysisData.archetype}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase">Core Skills</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {analysisData.skills.slice(0, 4).map((skill) => (
+                            <Badge key={skill} variant="outline" className="text-xs">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase">Target Client</p>
+                        <p className="text-sm">{analysisData.clientGap}</p>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              )}
+
+              <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium mb-1">AI-Optimized</p>
+                      <p className="text-xs text-muted-foreground">
+                        Suggestions based on real-time Upwork market research and your unique profile.
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            )}
-
-            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-              <CardContent className="pt-4">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium mb-1">AI-Optimized</p>
-                    <p className="text-xs text-muted-foreground">
-                      Suggestions are based on real-time market research and your unique profile strengths.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            </div>
           </div>
         </div>
       </div>

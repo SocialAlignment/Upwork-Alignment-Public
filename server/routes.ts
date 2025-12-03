@@ -126,13 +126,17 @@ export async function registerRoutes(
 
   app.post("/api/project-suggestions", async (req, res) => {
     try {
-      const analysisData = req.body;
+      const { analysisData, projectIdea } = req.body;
       
       if (!analysisData || !analysisData.archetype) {
         return res.status(400).json({ error: "Analysis data is required" });
       }
 
-      const suggestions = await generateProjectSuggestions(analysisData);
+      if (!projectIdea || projectIdea.trim().length < 20) {
+        return res.status(400).json({ error: "Project idea with at least 20 characters is required" });
+      }
+
+      const suggestions = await generateProjectSuggestions(analysisData, projectIdea);
       res.json(suggestions);
     } catch (error: any) {
       console.error("Error generating project suggestions:", error);

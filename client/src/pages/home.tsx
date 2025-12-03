@@ -22,7 +22,7 @@ export default function Home() {
   const handleContinue = (action: "enhance" | "project") => {
     if (action === "project" && analysisResult) {
       sessionStorage.setItem("analysisData", JSON.stringify(analysisResult));
-      navigate("/project-creation");
+      navigate("/project-idea");
     } else if (action === "enhance") {
       toast({
         title: "Coming Soon",
