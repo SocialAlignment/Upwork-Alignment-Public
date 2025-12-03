@@ -153,7 +153,7 @@ export default function Gallery() {
     let prompt = basePrompt;
     
     if (heroImageDescription.trim()) {
-      prompt = `Feature a professional photo/headshot of the freelancer: ${heroImageDescription.trim()}. ${prompt}`;
+      prompt = `Feature the ${heroImageDescription.trim()} prominently in the composition. ${prompt}`;
     }
     
     if (styleNotes.trim()) {
@@ -329,20 +329,29 @@ export default function Gallery() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <User className="w-5 h-5 text-purple-600" />
-                          Your Hero Image Description
+                          Include Your Photo
                         </CardTitle>
                         <CardDescription>
-                          Describe how you want to appear in the thumbnail (e.g., "Professional woman with brown hair, wearing a navy blazer, confident smile")
+                          When using this prompt in Gemini, attach your professional headshot as a reference photo
                         </CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <Textarea
-                          placeholder="Describe your appearance for the AI to include you in the thumbnail. Example: 'Professional man in his 30s with short dark hair, wearing a blue button-up shirt, friendly expression, clean-shaven'"
-                          value={heroImageDescription}
-                          onChange={(e) => setHeroImageDescription(e.target.value)}
-                          className="min-h-[80px]"
-                          data-testid="textarea-hero-description"
-                        />
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="includePhoto"
+                            checked={heroImageDescription === "person shown in the attached reference photo"}
+                            onCheckedChange={(checked) => 
+                              setHeroImageDescription(checked ? "person shown in the attached reference photo" : "")
+                            }
+                            data-testid="checkbox-include-photo"
+                          />
+                          <Label htmlFor="includePhoto" className="text-sm font-medium cursor-pointer">
+                            Include me in the thumbnail (attach your photo in Gemini)
+                          </Label>
+                        </div>
+                        <p className="text-xs text-muted-foreground ml-6">
+                          When checked, the prompt will reference "the person in the attached reference photo" - simply attach your headshot when pasting into Gemini
+                        </p>
                       </CardContent>
                     </Card>
 
