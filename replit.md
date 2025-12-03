@@ -113,6 +113,29 @@ The gallery video script generation follows a comprehensive tone of voice framew
   - Orange "Low Margin" badge when effectiveRate < targetHourlyRate or hours is 0
 - High-margin add-ons section suggests items with high client value but under 30 mins fulfillment time
 - Prevents freelancer burnout by making effort vs. compensation visible at a glance
+- Pricing data persists estimatedHours and targetHourlyRate to session storage for export
+
+**Gallery/Thumbnail Visual Styles (Nano Banana Best Practices)**
+- Visual Style dropdown with 4 optimized options for different niches:
+  - Photorealistic Studio (Trust & Clarity) - octane render, volumetric lighting
+  - 3D Isometric Tech (SaaS & Modern) - isometric perspective, clean edges
+  - Abstract Data Flow (Analytics & AI) - flowing gradients, data visualization
+  - Minimalist Brand (High-End Design) - negative space, geometric shapes
+- Outcome-First composition: foreground features tangible deliverable with floating UI elements
+- Cinematic lighting keywords and 8k resolution for high-quality outputs
+- Clean/solid backgrounds (no blurry/bokeh backgrounds)
+
+**Export Page (Step 7 - Final)**
+- Consolidates all project data in one place for Perplexity Comet agent
+- 5 tabs: Overview, Pricing, Gallery, Process, Description
+- Each section has copy-to-clipboard functionality
+- "Copy Everything" button generates formatted text export with:
+  - ASCII box header for visual clarity
+  - Section separators
+  - Profitability analysis for each pricing tier
+  - FAQ rationales with data evidence
+  - Profile context for reference
+- Preserves all evidence fields and rationales from prior steps
 
 ## External Dependencies
 
