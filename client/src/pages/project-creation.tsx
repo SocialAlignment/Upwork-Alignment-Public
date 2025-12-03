@@ -538,9 +538,15 @@ export default function ProjectCreation() {
               )}
 
               <div className="flex items-center justify-between pt-4">
-                <Button variant="outline" onClick={() => navigate("/")} data-testid="button-save-exit">
-                  Save & Exit
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => navigate("/project-idea")} className="gap-2" data-testid="button-back-bottom">
+                    <ArrowLeft className="w-4 h-4" />
+                    Back
+                  </Button>
+                  <Button variant="ghost" onClick={() => navigate("/")} data-testid="button-save-exit">
+                    Save & Exit
+                  </Button>
+                </div>
                 <Button 
                   className="gap-2"
                   disabled={!titleValid || !selectedCategory || isLoading}

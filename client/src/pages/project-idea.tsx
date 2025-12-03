@@ -134,8 +134,9 @@ Delivery: 2-3 weeks for MVP, with ongoing support available.`}
           </Card>
 
           <div className="flex items-center justify-between pt-4">
-            <Button variant="outline" onClick={() => navigate("/")} data-testid="button-cancel">
-              Cancel
+            <Button variant="outline" onClick={() => navigate("/")} className="gap-2" data-testid="button-back-bottom">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
             </Button>
             <Button 
               onClick={handleContinue}
