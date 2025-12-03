@@ -1,38 +1,71 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { Pool } from "@neondatabase/serverless";
+import {
+  type UserProfile,
+  type InsertUserProfile,
+  type AnalysisResult,
+  type InsertAnalysisResult,
+  type UpworkKnowledge,
+  type InsertUpworkKnowledge,
+  userProfiles,
+  analysisResults,
+  upworkKnowledge,
+} from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createUserProfile(profile: InsertUserProfile): Promise<UserProfile>;
+  getUserProfile(id: string): Promise<UserProfile | undefined>;
+  
+  createAnalysisResult(result: InsertAnalysisResult): Promise<AnalysisResult>;
+  getAnalysisResultByProfileId(profileId: string): Promise<AnalysisResult | undefined>;
+  
+  createUpworkKnowledge(knowledge: InsertUpworkKnowledge): Promise<UpworkKnowledge>;
+  getUpworkKnowledgeByType(type: string): Promise<UpworkKnowledge | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+class DatabaseStorage implements IStorage {
+  private db;
 
   constructor() {
-    this.users = new Map();
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    this.db = drizzle(pool);
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
+    const [result] = await this.db.insert(userProfiles).values(profile).returning();
+    return result;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async getUserProfile(id: string): Promise<UserProfile | undefined> {
+    const [result] = await this.db.select().from(userProfiles).where(eq(userProfiles.id, id));
+    return result;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async createAnalysisResult(result: InsertAnalysisResult): Promise<AnalysisResult> {
+    const [created] = await this.db.insert(analysisResults).values({
+      ...result,
+      skills: result.skills as any,
+      projects: result.projects as any,
+      recommendedKeywords: result.recommendedKeywords as any,
+    }).returning();
+    return created;
+  }
+
+  async getAnalysisResultByProfileId(profileId: string): Promise<AnalysisResult | undefined> {
+    const [result] = await this.db.select().from(analysisResults).where(eq(analysisResults.profileId, profileId));
+    return result;
+  }
+
+  async createUpworkKnowledge(knowledge: InsertUpworkKnowledge): Promise<UpworkKnowledge> {
+    const [result] = await this.db.insert(upworkKnowledge).values(knowledge).returning();
+    return result;
+  }
+
+  async getUpworkKnowledgeByType(type: string): Promise<UpworkKnowledge | undefined> {
+    const [result] = await this.db.select().from(upworkKnowledge).where(eq(upworkKnowledge.knowledgeType, type));
+    return result;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
