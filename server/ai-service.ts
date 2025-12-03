@@ -225,8 +225,15 @@ export async function generateProjectSuggestions(
 
   const availableCategories = level1Categories.map(l1 => {
     const l2s = getLevel2Categories(l1);
-    return `${l1}: ${l2s.slice(0, 5).join(", ")}${l2s.length > 5 ? '...' : ''}`;
-  }).join("\n");
+    const l2Details = l2s.map(l2 => {
+      const l3s = getLevel3Categories(l1, l2);
+      if (l3s.length > 0) {
+        return `  ${l2} > [${l3s.join(", ")}]`;
+      }
+      return `  ${l2}`;
+    }).join("\n");
+    return `${l1}:\n${l2Details}`;
+  }).join("\n\n");
 
   const marketSection = `CURRENT MARKET RESEARCH:
 ${marketInsights}
@@ -234,6 +241,9 @@ ${marketInsights}
 `;
 
   const prompt = `You are an expert Upwork project optimization consultant. Based on the freelancer's project idea, profile analysis, and current market research, generate optimized project catalog suggestions.
+
+CRITICAL CATEGORY INSTRUCTION:
+You are STRICTLY FORBIDDEN from inventing categories. You MUST map the project idea to the BEST FITTING EXISTING OPTION from the provided category list below, even if it is not a perfect word-for-word match. If the exact niche (e.g., "Kids Song") is not listed, select the parent category that logically contains it (e.g., "Full Song Production"). Never output a category that does not appear in the list.
 
 PROJECT IDEA FROM FREELANCER:
 ${projectIdea}
