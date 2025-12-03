@@ -16,12 +16,10 @@ export async function analyzeProfile(profileData: ProfileData): Promise<Omit<Ins
   
   const marketContext = await searchUpworkInsights(
     `Identify the top 3 high-value freelancer archetypes and common client complaints for a professional with this experience: ${resumeSnippet}`
-  ).catch((error) => {
-    throw new Error("Market Research Failed: Cannot proceed without live data. Please try again.");
-  });
+  );
 
   if (!marketContext || marketContext.trim() === "") {
-    throw new Error("Market Research Failed: Cannot proceed without live data. Please try again.");
+    throw new Error("Market Research Failed: Perplexity returned empty response. Cannot proceed without live data.");
   }
 
   const marketSection = `LIVE MARKET RESEARCH (Current Upwork trends and insights):
@@ -217,12 +215,10 @@ export async function generateProjectSuggestions(
   
   Please provide specific, actionable insights with examples based on current Upwork trends.`;
 
-  const marketInsights = await searchUpworkInsights(marketResearchQuery).catch((error) => {
-    throw new Error("Market Research Failed: Cannot proceed without live data. Please try again.");
-  });
+  const marketInsights = await searchUpworkInsights(marketResearchQuery);
 
   if (!marketInsights || marketInsights.trim() === "") {
-    throw new Error("Market Research Failed: Cannot proceed without live data. Please try again.");
+    throw new Error("Market Research Failed: Perplexity returned empty response. Cannot proceed without live data.");
   }
 
   const availableCategories = level1Categories.map(l1 => {
@@ -357,12 +353,10 @@ export async function generatePricingSuggestions(
   
   Provide specific dollar amounts and timeframes based on current Upwork market data.`;
 
-  const pricingInsights = await searchUpworkInsights(pricingResearchQuery).catch((error) => {
-    throw new Error("Market Research Failed: Cannot proceed without live pricing data. Please try again.");
-  });
+  const pricingInsights = await searchUpworkInsights(pricingResearchQuery);
 
   if (!pricingInsights || pricingInsights.trim() === "") {
-    throw new Error("Market Research Failed: Cannot proceed without live pricing data. Please try again.");
+    throw new Error("Market Research Failed: Perplexity returned empty pricing response. Cannot proceed without live data.");
   }
 
   const marketSection = `CURRENT MARKET RESEARCH:
@@ -957,12 +951,10 @@ export async function generateDescriptionSuggestions(
   
   Provide specific examples and insights based on current Upwork trends.`;
 
-  const descriptionInsights = await searchUpworkInsights(descriptionResearchQuery).catch((error) => {
-    throw new Error("Market Research Failed: Cannot proceed without live data. Please try again.");
-  });
+  const descriptionInsights = await searchUpworkInsights(descriptionResearchQuery);
 
   if (!descriptionInsights || descriptionInsights.trim() === "") {
-    throw new Error("Market Research Failed: Cannot proceed without live data. Please try again.");
+    throw new Error("Market Research Failed: Perplexity returned empty response. Cannot proceed without live data.");
   }
 
   const marketSection = `CURRENT MARKET RESEARCH:
