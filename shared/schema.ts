@@ -160,3 +160,23 @@ export interface GallerySuggestion {
   sampleDocuments: SampleDocument[];
   galleryStrategy: string;
 }
+
+export interface ProjectRequirement {
+  text: string;
+  isRequired: boolean;
+  rationale: string;
+}
+
+export interface ProjectStep {
+  title: string;
+  description: string;
+  estimatedDuration?: string;
+  rationale: string;
+}
+
+export interface ProcessSuggestion {
+  requirements: ProjectRequirement[];
+  steps: ProjectStep[];
+  processStrategy: string;
+  clientCommunicationTip: string;
+}
