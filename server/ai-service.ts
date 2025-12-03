@@ -379,7 +379,14 @@ FREELANCER PROFILE:
 - Target Client: ${analysisData.clientGap}
 - Strategic Position: ${analysisData.suggestedPivot}
 
-${marketSection}Generate a comprehensive 3-tier pricing structure in this JSON format:
+${marketSection}EFFORT ANALYSIS REQUIREMENT:
+For each tier, you MUST estimate the actual "Labor Hours" required to fulfill the deliverables. This is critical for the freelancer to assess profitability and avoid burnout. Consider:
+- Time for initial client communication and requirements gathering
+- Actual production/development/creation time
+- Revision rounds typically needed at each tier level
+- Final delivery and handoff time
+
+Generate a comprehensive 3-tier pricing structure in this JSON format:
 {
   "tiers": {
     "starter": {
@@ -393,7 +400,9 @@ ${marketSection}Generate a comprehensive 3-tier pricing structure in this JSON f
       "price": 150,
       "priceRationale": "Why this price point works based on market data and proficiency level",
       "features": ["Feature 1", "Feature 2"],
-      "featuresRationale": "Why these features are included at the starter level"
+      "featuresRationale": "Why these features are included at the starter level",
+      "estimatedHours": 2,
+      "estimatedHoursRationale": "Breakdown: 0.5hr client call, 1hr production, 0.5hr revisions and delivery"
     },
     "standard": {
       "name": "Standard",
@@ -406,7 +415,9 @@ ${marketSection}Generate a comprehensive 3-tier pricing structure in this JSON f
       "price": 350,
       "priceRationale": "Why this price represents best value based on market positioning",
       "features": ["Feature 1", "Feature 2", "Feature 3"],
-      "featuresRationale": "Why these features make this tier the sweet spot"
+      "featuresRationale": "Why these features make this tier the sweet spot",
+      "estimatedHours": 5,
+      "estimatedHoursRationale": "Breakdown: 1hr discovery, 3hr production, 1hr revisions and delivery"
     },
     "advanced": {
       "name": "Advanced",
@@ -419,7 +430,9 @@ ${marketSection}Generate a comprehensive 3-tier pricing structure in this JSON f
       "price": 750,
       "priceRationale": "Why this premium price is justified based on value and market rates",
       "features": ["Feature 1", "Feature 2", "Feature 3", "Feature 4"],
-      "featuresRationale": "Why these premium features command higher pricing"
+      "featuresRationale": "Why these premium features command higher pricing",
+      "estimatedHours": 10,
+      "estimatedHoursRationale": "Breakdown: 1.5hr strategy/discovery, 6hr production, 2.5hr revisions, handoff, and support"
     }
   },
   "serviceOptions": [
@@ -435,7 +448,7 @@ ${marketSection}Generate a comprehensive 3-tier pricing structure in this JSON f
     {
       "name": "Express Delivery",
       "price": 50,
-      "rationale": "Why clients would pay extra for this add-on"
+      "rationale": "High-margin: Requires minimal extra effort (under 30 mins) but offers significant client value"
     }
   ],
   "pricingStrategy": "A 2-3 sentence explanation of the overall pricing strategy and how the tiers are designed to maximize conversions",
@@ -451,6 +464,16 @@ IMPORTANT PRICING GUIDELINES:
 - Each tier description must be under 80 characters
 - Service options should create clear differentiation between tiers
 - Include 3-5 service options and 2-4 add-ons
+
+EFFORT ANALYSIS GUIDELINES:
+- estimatedHours must be realistic based on the deliverables - be honest, not optimistic
+- Include ALL time: communication, production, revisions, delivery
+- estimatedHoursRationale must show the breakdown (e.g., "1hr discovery + 3hr production + 1hr revisions")
+
+HIGH-MARGIN ADD-ONS REQUIREMENT:
+- Add-ons should be "High-Margin": items that offer high client value but require minimal fulfillment time (under 30 minutes of additional work)
+- Examples: Priority support queue, expedited delivery, additional file formats, extended license
+- Avoid low-margin add-ons that significantly increase work time
 
 Return ONLY valid JSON, no additional text.`;
 
