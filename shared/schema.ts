@@ -99,6 +99,8 @@ export interface PricingTier {
   priceRationale: string;
   features: string[];
   featuresRationale: string;
+  estimatedHours: number;
+  estimatedHoursRationale: string;
 }
 
 export interface ServiceOption {
