@@ -578,6 +578,13 @@ export default function ProjectCreation() {
                 <Button 
                   className="gap-2"
                   disabled={!titleValid || !selectedCategory || isLoading}
+                  onClick={() => {
+                    sessionStorage.setItem("selectedProjectTitle", customTitle);
+                    sessionStorage.setItem("selectedProjectCategory", `${selectedCategory?.level1} > ${selectedCategory?.level2}${selectedCategory?.level3 ? ` > ${selectedCategory.level3}` : ''}`);
+                    sessionStorage.setItem("selectedSearchTags", JSON.stringify(searchTags));
+                    sessionStorage.removeItem("pricingSuggestions");
+                    navigate("/pricing");
+                  }}
                   data-testid="button-save-continue"
                 >
                   Continue to Pricing
