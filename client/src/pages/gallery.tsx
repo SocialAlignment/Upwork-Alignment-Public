@@ -1,13 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, RefreshCw, Image, Video, FileText, Copy, Check, Sparkles, Palette, Clock, Info, Lightbulb } from "lucide-react";
+import { ArrowLeft, ArrowRight, RefreshCw, Image, Video, FileText, Copy, Check, Sparkles, Palette, Clock, Info, Lightbulb, Upload, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getGallerySuggestions } from "@/lib/api";
 import type { GallerySuggestion, VideoScript, SampleDocument } from "@shared/schema";
@@ -59,6 +63,14 @@ export default function Gallery() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  
+  const [heroImageDescription, setHeroImageDescription] = useState("");
+  const [styleNotes, setStyleNotes] = useState("");
+  const [colorPalette, setColorPalette] = useState<string[]>([]);
+  const [compositionTips, setCompositionTips] = useState("");
+  const [noTextOnImage, setNoTextOnImage] = useState(false);
+  const [basePrompt, setBasePrompt] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const storedAnalysis = sessionStorage.getItem("analysisData");
@@ -126,6 +138,53 @@ export default function Gallery() {
       sessionStorage.removeItem("gallerySuggestions");
       fetchSuggestions(analysisData, projectIdea, projectTitle, projectCategory, pricingData);
     }
+  };
+
+  useEffect(() => {
+    if (suggestions?.thumbnailPrompt) {
+      setBasePrompt(suggestions.thumbnailPrompt.prompt || "");
+      setStyleNotes(suggestions.thumbnailPrompt.styleNotes || "");
+      setColorPalette(suggestions.thumbnailPrompt.colorPalette || []);
+      setCompositionTips(suggestions.thumbnailPrompt.compositionTips || "");
+    }
+  }, [suggestions]);
+
+  const generateCombinedPrompt = () => {
+    let prompt = basePrompt;
+    
+    if (heroImageDescription.trim()) {
+      prompt = `Feature a professional photo/headshot of the freelancer: ${heroImageDescription.trim()}. ${prompt}`;
+    }
+    
+    if (styleNotes.trim()) {
+      prompt += ` Style: ${styleNotes.trim()}.`;
+    }
+    
+    if (colorPalette.length > 0) {
+      prompt += ` Color palette: ${colorPalette.join(", ")}.`;
+    }
+    
+    if (compositionTips.trim()) {
+      prompt += ` Composition: ${compositionTips.trim()}.`;
+    }
+    
+    prompt += " Image dimensions: 1000x750px (4:3 aspect ratio, Upwork Project Catalog standard). High-resolution, professional quality.";
+    
+    if (noTextOnImage) {
+      prompt += " IMPORTANT: Do NOT include any text, captions, titles, labels, or typography on the image. The image should be purely visual with no written elements.";
+    }
+    
+    return prompt;
+  };
+
+  const addColor = (color: string) => {
+    if (color && !colorPalette.includes(color)) {
+      setColorPalette([...colorPalette, color]);
+    }
+  };
+
+  const removeColor = (colorToRemove: string) => {
+    setColorPalette(colorPalette.filter(c => c !== colorToRemove));
   };
 
   const copyToClipboard = async (text: string, fieldName: string) => {
@@ -268,65 +327,177 @@ export default function Gallery() {
                   <TabsContent value="thumbnail" className="space-y-4">
                     <Card>
                       <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <User className="w-5 h-5 text-purple-600" />
+                          Your Hero Image Description
+                        </CardTitle>
+                        <CardDescription>
+                          Describe how you want to appear in the thumbnail (e.g., "Professional woman with brown hair, wearing a navy blazer, confident smile")
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Textarea
+                          placeholder="Describe your appearance for the AI to include you in the thumbnail. Example: 'Professional man in his 30s with short dark hair, wearing a blue button-up shirt, friendly expression, clean-shaven'"
+                          value={heroImageDescription}
+                          onChange={(e) => setHeroImageDescription(e.target.value)}
+                          className="min-h-[80px]"
+                          data-testid="textarea-hero-description"
+                        />
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Sparkles className="w-5 h-5 text-blue-600" />
+                          Base Prompt
+                        </CardTitle>
+                        <CardDescription>
+                          AI-generated prompt based on your project. Edit to customize.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Textarea
+                          value={basePrompt}
+                          onChange={(e) => setBasePrompt(e.target.value)}
+                          className="min-h-[120px] font-mono text-sm"
+                          data-testid="textarea-base-prompt"
+                        />
+                      </CardContent>
+                    </Card>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <Palette className="w-4 h-4 text-purple-500" />
+                            Style Notes
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <Textarea
+                            placeholder="e.g., Modern minimalist, tech-forward professional"
+                            value={styleNotes}
+                            onChange={(e) => setStyleNotes(e.target.value)}
+                            className="min-h-[60px]"
+                            data-testid="textarea-style-notes"
+                          />
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base">Color Palette</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="flex flex-wrap gap-2">
+                            {colorPalette.map((color, idx) => (
+                              <div 
+                                key={idx}
+                                className="flex items-center gap-1 px-2 py-1 rounded border bg-white dark:bg-slate-800"
+                              >
+                                <div 
+                                  className="w-4 h-4 rounded-full border"
+                                  style={{ backgroundColor: color }}
+                                />
+                                <span className="text-xs font-mono">{color}</span>
+                                <button
+                                  onClick={() => removeColor(color)}
+                                  className="ml-1 text-muted-foreground hover:text-destructive"
+                                  data-testid={`button-remove-color-${idx}`}
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <Input
+                              type="color"
+                              className="w-12 h-8 p-1 cursor-pointer"
+                              onChange={(e) => addColor(e.target.value)}
+                              data-testid="input-color-picker"
+                            />
+                            <Input
+                              placeholder="Add hex color (e.g., #1a237e)"
+                              className="flex-1"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const input = e.target as HTMLInputElement;
+                                  if (input.value.match(/^#[0-9A-Fa-f]{6}$/)) {
+                                    addColor(input.value);
+                                    input.value = '';
+                                  }
+                                }
+                              }}
+                              data-testid="input-hex-color"
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Composition Tips</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Textarea
+                          placeholder="e.g., Place subject on left third, flowing elements on right"
+                          value={compositionTips}
+                          onChange={(e) => setCompositionTips(e.target.value)}
+                          className="min-h-[60px]"
+                          data-testid="textarea-composition"
+                        />
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="noText"
+                            checked={noTextOnImage}
+                            onCheckedChange={(checked) => setNoTextOnImage(checked === true)}
+                            data-testid="checkbox-no-text"
+                          />
+                          <Label htmlFor="noText" className="text-sm font-medium cursor-pointer">
+                            No captions, no text on image
+                          </Label>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 ml-6">
+                          Check this to ensure the generated image contains no text or typography
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-2 border-primary/20 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/10 dark:to-blue-900/10">
+                      <CardHeader>
                         <div className="flex items-center justify-between">
                           <div>
                             <CardTitle className="flex items-center gap-2">
-                              <Image className="w-5 h-5 text-purple-600" />
-                              Thumbnail Image Prompt
+                              <Sparkles className="w-5 h-5 text-primary" />
+                              Complete Prompt (Ready to Copy)
                             </CardTitle>
                             <CardDescription>
-                              Copy this prompt and paste it into Gemini, DALL-E, or Midjourney
+                              This combines all your settings into one prompt for Gemini, DALL-E, or Midjourney
                             </CardDescription>
                           </div>
                           <CopyButton 
-                            text={suggestions?.thumbnailPrompt?.prompt || ""} 
-                            fieldName="Thumbnail Prompt" 
+                            text={generateCombinedPrompt()} 
+                            fieldName="Complete Prompt" 
                           />
                         </div>
                       </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="p-4 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border">
-                          <p className="text-sm leading-relaxed font-mono whitespace-pre-wrap">
-                            {suggestions?.thumbnailPrompt?.prompt || "No prompt generated"}
+                      <CardContent>
+                        <div className="p-4 rounded-lg bg-white dark:bg-slate-900 border">
+                          <p className="text-sm leading-relaxed font-mono whitespace-pre-wrap" data-testid="text-combined-prompt">
+                            {generateCombinedPrompt()}
                           </p>
                         </div>
-
-                        <Separator />
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <h4 className="font-medium text-sm flex items-center gap-2">
-                              <Palette className="w-4 h-4 text-muted-foreground" />
-                              Style Notes
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {suggestions?.thumbnailPrompt?.styleNotes || "No style notes"}
-                            </p>
-                          </div>
-
-                          <div className="space-y-2">
-                            <h4 className="font-medium text-sm">Suggested Colors</h4>
-                            <div className="flex gap-2">
-                              {suggestions?.thumbnailPrompt?.colorPalette?.map((color, idx) => (
-                                <div 
-                                  key={idx}
-                                  className="flex items-center gap-2 px-2 py-1 rounded border bg-white dark:bg-slate-800"
-                                >
-                                  <div 
-                                    className="w-4 h-4 rounded-full border"
-                                    style={{ backgroundColor: color }}
-                                  />
-                                  <span className="text-xs font-mono">{color}</span>
-                                </div>
-                              )) || <span className="text-sm text-muted-foreground">No colors suggested</span>}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <h4 className="font-medium text-sm">Composition Tips</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {suggestions?.thumbnailPrompt?.compositionTips || "No composition tips"}
+                        <div className="mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                          <p className="text-xs text-amber-800 dark:text-amber-200">
+                            <strong>Upwork Best Practice:</strong> Images should be 1000×750px (4:3 ratio). Show outcomes/results, use simple compositions, and ensure 3-second clarity. High contrast and professional colors perform best.
                           </p>
                         </div>
                       </CardContent>

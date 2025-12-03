@@ -493,13 +493,24 @@ FREELANCER PROFILE:
 - Core Skills: ${analysisData.skills.join(", ")}
 - Target Client: ${analysisData.clientGap}
 
+UPWORK COVER IMAGE BEST PRACTICES (Apply these to thumbnail prompt):
+- Image size: 1000x750px (4:3 aspect ratio) for Upwork Project Catalog
+- Show OUTCOMES and RESULTS, not just process (before/after comparisons, metrics, data visualizations)
+- 3-second clarity rule: clients should understand the offer instantly while browsing
+- Simple compositions beat cluttered collages
+- High contrast and professional color schemes
+- Include industry-specific signals (relevant tech logos, tool interfaces, device mockups)
+- For design/dev: show Figma screens, code snippets, device mockups with actual deliverables
+- For marketing: show GA4 dashboards, engagement graphs, ROI charts
+- Avoid: generic stock photos, text-heavy designs, pixelated images, multiple unrelated services
+
 Generate comprehensive gallery content in this JSON format:
 {
   "thumbnailPrompt": {
-    "prompt": "A detailed, specific prompt for AI image generation (Gemini/DALL-E style) to create a professional, eye-catching project thumbnail. Include specific visual elements, style, colors, composition. The prompt should be ready to copy and paste into an image generator. Make it 2-3 sentences.",
-    "styleNotes": "Additional notes on the visual style (e.g., 'Modern minimalist', 'Professional corporate')",
+    "prompt": "A detailed, specific prompt for AI image generation optimized for Upwork Project Catalog covers. Must be 1000x750px (4:3 ratio). Include outcome-focused visuals (results, deliverables, before/after), industry-relevant signals (tech logos, tool interfaces), professional composition with high contrast. The prompt should be ready to copy and paste into Gemini/DALL-E/Midjourney. Make it 3-4 sentences with specific visual elements.",
+    "styleNotes": "Style direction (e.g., 'Modern tech-forward', 'Clean corporate', 'Creative agency aesthetic')",
     "colorPalette": ["#hexcolor1", "#hexcolor2", "#hexcolor3"],
-    "compositionTips": "Tips on layout and visual hierarchy for the thumbnail"
+    "compositionTips": "Specific layout guidance following the rule of thirds, focal points, and visual hierarchy for 3-second clarity"
   },
   "videoScript": {
     "hook": "Opening 5-10 second attention-grabbing statement",
