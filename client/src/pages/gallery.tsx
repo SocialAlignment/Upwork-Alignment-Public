@@ -29,6 +29,24 @@ interface AnalysisResult {
   recommendedKeywords: string[];
 }
 
+interface PricingTier {
+  title: string;
+  description: string;
+  deliveryDays: number;
+  price: number;
+}
+
+interface PricingSelections {
+  use3Tiers: boolean;
+  tiers: {
+    starter: PricingTier | null;
+    standard: PricingTier;
+    advanced: PricingTier | null;
+  };
+  serviceOptions: { name: string; starterIncluded: boolean; standardIncluded: boolean; advancedIncluded: boolean }[];
+  addOns: { name: string; price: number }[];
+}
+
 export default function Gallery() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -36,6 +54,7 @@ export default function Gallery() {
   const [projectIdea, setProjectIdea] = useState("");
   const [projectTitle, setProjectTitle] = useState("");
   const [projectCategory, setProjectCategory] = useState("");
+  const [pricingData, setPricingData] = useState<PricingSelections | null>(null);
   const [suggestions, setSuggestions] = useState<GallerySuggestion | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +65,7 @@ export default function Gallery() {
     const storedIdea = sessionStorage.getItem("projectIdea");
     const storedTitle = sessionStorage.getItem("selectedProjectTitle");
     const storedCategory = sessionStorage.getItem("selectedProjectCategory");
+    const storedPricing = sessionStorage.getItem("pricingSelections");
     const cachedGallery = sessionStorage.getItem("gallerySuggestions");
     
     if (!storedAnalysis || !storedIdea) {
@@ -56,10 +76,12 @@ export default function Gallery() {
 
     try {
       const parsedAnalysis = JSON.parse(storedAnalysis);
+      const parsedPricing = storedPricing ? JSON.parse(storedPricing) : null;
       setAnalysisData(parsedAnalysis);
       setProjectIdea(storedIdea);
       setProjectTitle(storedTitle || "Your Project");
       setProjectCategory(storedCategory || "General");
+      setPricingData(parsedPricing);
       
       if (cachedGallery) {
         try {
@@ -71,7 +93,7 @@ export default function Gallery() {
         }
       }
       
-      fetchSuggestions(parsedAnalysis, storedIdea, storedTitle || "Your Project", storedCategory || "General");
+      fetchSuggestions(parsedAnalysis, storedIdea, storedTitle || "Your Project", storedCategory || "General", parsedPricing);
     } catch (e) {
       setError("Failed to load data. Please go back and try again.");
       setIsLoading(false);
@@ -82,12 +104,13 @@ export default function Gallery() {
     data: AnalysisResult, 
     idea: string, 
     title: string,
-    category: string
+    category: string,
+    pricing: PricingSelections | null
   ) => {
     try {
       setIsLoading(true);
       setError(null);
-      const result = await getGallerySuggestions(data, idea, title, category);
+      const result = await getGallerySuggestions(data, idea, title, category, pricing);
       
       setSuggestions(result);
       sessionStorage.setItem("gallerySuggestions", JSON.stringify(result));
@@ -101,7 +124,7 @@ export default function Gallery() {
   const handleRegenerate = () => {
     if (analysisData && projectIdea) {
       sessionStorage.removeItem("gallerySuggestions");
-      fetchSuggestions(analysisData, projectIdea, projectTitle, projectCategory);
+      fetchSuggestions(analysisData, projectIdea, projectTitle, projectCategory, pricingData);
     }
   };
 

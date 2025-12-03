@@ -90,14 +90,15 @@ export async function getGallerySuggestions(
   analysisData: any, 
   projectIdea: string, 
   projectTitle: string,
-  projectCategory: string
+  projectCategory: string,
+  pricingData?: any
 ) {
   const response = await fetch("/api/gallery-suggestions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ analysisData, projectIdea, projectTitle, projectCategory }),
+    body: JSON.stringify({ analysisData, projectIdea, projectTitle, projectCategory, pricingData }),
   });
 
   if (!response.ok) {

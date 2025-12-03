@@ -689,7 +689,7 @@ export default function Pricing() {
                       serviceOptions: serviceOptions.filter(opt => 
                         opt.starterIncluded || opt.standardIncluded || opt.advancedIncluded
                       ),
-                      addOns: addOns.filter(addon => addon.enabled)
+                      addOns: addOns
                     };
                     sessionStorage.setItem("pricingSelections", JSON.stringify(pricingSelections));
                     sessionStorage.removeItem("gallerySuggestions");
