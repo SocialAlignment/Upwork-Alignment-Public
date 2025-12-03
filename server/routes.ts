@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import multer from "multer";
 import { analyzeProfile, generateProjectSuggestions, generatePricingSuggestions, generateGallerySuggestions, generateProcessSuggestions, generateDescriptionSuggestions } from "./ai-service";
 import { UPWORK_CATEGORIES, PROJECT_ATTRIBUTES, TITLE_BEST_PRACTICES } from "./upwork-knowledge";
+import { createNotionPage } from "./notion-service";
 
 async function parsePdf(buffer: Buffer): Promise<string> {
   const { PDFParse } = await import("pdf-parse");
@@ -312,6 +313,46 @@ export async function registerRoutes(
       
       res.status(500).json({ 
         error: "Failed to generate description suggestions. Please try again." 
+      });
+    }
+  });
+
+  app.post("/api/export-notion", async (req, res) => {
+    try {
+      const { databaseId, projectData } = req.body;
+      
+      if (!databaseId || typeof databaseId !== 'string') {
+        return res.status(400).json({ error: "Notion Database ID is required" });
+      }
+
+      if (!projectData || !projectData.title) {
+        return res.status(400).json({ error: "Project data is required" });
+      }
+
+      const result = await createNotionPage(databaseId, projectData);
+      
+      res.json({ 
+        success: true, 
+        pageId: result.pageId,
+        url: result.url
+      });
+    } catch (error: any) {
+      console.error("Error exporting to Notion:", error);
+      
+      if (error.message?.includes("not connected")) {
+        return res.status(401).json({ 
+          error: "Notion is not connected. Please connect your Notion account." 
+        });
+      }
+      
+      if (error.message?.includes("database_id")) {
+        return res.status(400).json({ 
+          error: "Invalid Database ID. Please check your Notion Database ID." 
+        });
+      }
+      
+      res.status(500).json({ 
+        error: "Failed to export to Notion. Please try again." 
       });
     }
   });

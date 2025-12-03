@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, Copy, Check, FileText, DollarSign, Image, ListChecks, MessageSquare, Sparkles, Download, ExternalLink } from "lucide-react";
+import { ArrowLeft, Copy, Check, FileText, DollarSign, Image, ListChecks, MessageSquare, Sparkles, Download, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface AnalysisResult {
   archetype: string;
@@ -91,6 +94,12 @@ export default function Export() {
   const [exportData, setExportData] = useState<ExportData | null>(null);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notionDialogOpen, setNotionDialogOpen] = useState(false);
+  const [notionDatabaseId, setNotionDatabaseId] = useState(() => {
+    return localStorage.getItem("notionDatabaseId") || "";
+  });
+  const [isExportingToNotion, setIsExportingToNotion] = useState(false);
+  const [notionExportResult, setNotionExportResult] = useState<{ success: boolean; url?: string; error?: string } | null>(null);
 
   useEffect(() => {
     try {
@@ -141,6 +150,70 @@ export default function Export() {
         description: "Please try selecting and copying manually",
         variant: "destructive",
       });
+    }
+  };
+
+  const exportToNotion = async () => {
+    if (!notionDatabaseId.trim()) {
+      toast({
+        title: "Database ID Required",
+        description: "Please enter your Notion Database ID",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!exportData) {
+      toast({
+        title: "No Data",
+        description: "No project data to export",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    localStorage.setItem("notionDatabaseId", notionDatabaseId);
+    setIsExportingToNotion(true);
+    setNotionExportResult(null);
+
+    try {
+      const response = await fetch("/api/export-notion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          databaseId: notionDatabaseId.trim(),
+          projectData: {
+            title: exportData.projectTitle,
+            category: exportData.projectCategory,
+            pricing: exportData.pricing,
+            gallery: exportData.gallery,
+            process: exportData.process,
+            description: exportData.description,
+            profileContext: sessionStorage.getItem("profileContext") || undefined,
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Export failed");
+      }
+
+      setNotionExportResult({ success: true, url: result.url });
+      toast({
+        title: "Exported to Notion!",
+        description: "Your project has been created in Notion",
+      });
+    } catch (err: any) {
+      setNotionExportResult({ success: false, error: err.message });
+      toast({
+        title: "Export Failed",
+        description: err.message || "Could not export to Notion",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExportingToNotion(false);
     }
   };
 
@@ -417,23 +490,96 @@ export default function Export() {
                     </div>
                   )}
                 </div>
-                <Button
-                  onClick={() => copyToClipboard(formatFullExport(), "Full Export")}
-                  className="gap-2"
-                  data-testid="button-copy-all"
-                >
-                  {copiedSection === "Full Export" ? (
-                    <>
-                      <Check className="h-4 w-4" />
-                      Copied All
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4" />
-                      Copy Everything
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => copyToClipboard(formatFullExport(), "Full Export")}
+                    className="gap-2"
+                    data-testid="button-copy-all"
+                  >
+                    {copiedSection === "Full Export" ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        Copied All
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4" />
+                        Copy Everything
+                      </>
+                    )}
+                  </Button>
+                  <Dialog open={notionDialogOpen} onOpenChange={setNotionDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="gap-2" data-testid="button-export-notion">
+                        <ExternalLink className="h-4 w-4" />
+                        Export to Notion
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Export to Notion</DialogTitle>
+                        <DialogDescription>
+                          Enter your Notion Database ID to create a new page with your project data.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="notion-database-id">Notion Database ID</Label>
+                          <Input
+                            id="notion-database-id"
+                            placeholder="e.g., abc123def456..."
+                            value={notionDatabaseId}
+                            onChange={(e) => setNotionDatabaseId(e.target.value)}
+                            data-testid="input-notion-database-id"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Find this in your Notion database URL after the workspace name and before the "?v=" parameter.
+                          </p>
+                        </div>
+                        {notionExportResult && (
+                          <div className={`p-3 rounded-lg ${notionExportResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                            {notionExportResult.success ? (
+                              <div className="flex items-center justify-between">
+                                <span>Successfully exported!</span>
+                                {notionExportResult.url && (
+                                  <a 
+                                    href={notionExportResult.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="underline flex items-center gap-1"
+                                  >
+                                    Open in Notion <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                )}
+                              </div>
+                            ) : (
+                              <span>{notionExportResult.error}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setNotionDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button 
+                          onClick={exportToNotion} 
+                          disabled={isExportingToNotion}
+                          data-testid="button-confirm-notion-export"
+                        >
+                          {isExportingToNotion ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Exporting...
+                            </>
+                          ) : (
+                            "Export"
+                          )}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
             </CardContent>
           </Card>
