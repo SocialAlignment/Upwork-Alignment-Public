@@ -663,6 +663,10 @@ export default function Pricing() {
                 <Button 
                   className="gap-2"
                   disabled={isLoading || (use3Tiers ? !starterPrice || !standardPrice || !advancedPrice : !standardPrice)}
+                  onClick={() => {
+                    sessionStorage.removeItem("gallerySuggestions");
+                    navigate("/gallery");
+                  }}
                   data-testid="button-continue"
                 >
                   Continue to Gallery

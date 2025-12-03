@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
-import { analyzeProfile, generateProjectSuggestions, generatePricingSuggestions } from "./ai-service";
+import { analyzeProfile, generateProjectSuggestions, generatePricingSuggestions, generateGallerySuggestions } from "./ai-service";
 import { UPWORK_CATEGORIES, PROJECT_ATTRIBUTES, TITLE_BEST_PRACTICES } from "./upwork-knowledge";
 
 async function parsePdf(buffer: Buffer): Promise<string> {
@@ -187,6 +187,44 @@ export async function registerRoutes(
       
       res.status(500).json({ 
         error: "Failed to generate pricing suggestions. Please try again." 
+      });
+    }
+  });
+
+  app.post("/api/gallery-suggestions", async (req, res) => {
+    try {
+      const { analysisData, projectIdea, projectTitle, projectCategory } = req.body;
+      
+      if (!analysisData || !analysisData.archetype) {
+        return res.status(400).json({ error: "Analysis data is required" });
+      }
+
+      if (!projectIdea || projectIdea.trim().length < 10) {
+        return res.status(400).json({ error: "Project idea is required" });
+      }
+
+      if (!projectTitle) {
+        return res.status(400).json({ error: "Project title is required" });
+      }
+
+      const suggestions = await generateGallerySuggestions(
+        analysisData, 
+        projectIdea, 
+        projectTitle,
+        projectCategory || "General"
+      );
+      res.json(suggestions);
+    } catch (error: any) {
+      console.error("Error generating gallery suggestions:", error);
+      
+      if (error.message?.includes("JSON")) {
+        return res.status(500).json({ 
+          error: "AI returned an unexpected format. Please try again." 
+        });
+      }
+      
+      res.status(500).json({ 
+        error: "Failed to generate gallery content. Please try again." 
       });
     }
   });

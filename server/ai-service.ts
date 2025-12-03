@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { InsertAnalysisResult, AnalysisResult, ProjectSuggestion, PricingSuggestion } from "@shared/schema";
+import type { InsertAnalysisResult, AnalysisResult, ProjectSuggestion, PricingSuggestion, GallerySuggestion } from "@shared/schema";
 import { level1Categories, getLevel2Categories, getLevel3Categories, hasLevel3 } from "@shared/upwork-categories";
 
 const anthropic = new Anthropic();
@@ -452,5 +452,131 @@ Return ONLY valid JSON, no additional text.`;
     addOns: parsed.addOns || [],
     pricingStrategy: parsed.pricingStrategy || "",
     marketContext: parsed.marketContext || pricingInsights,
+  };
+}
+
+export async function generateGallerySuggestions(
+  analysisData: AnalysisResult,
+  projectIdea: string,
+  projectTitle: string,
+  projectCategory: string
+): Promise<GallerySuggestion> {
+  const prompt = `You are an expert Upwork project marketing strategist. Generate compelling gallery content for a freelancer's project listing.
+
+PROJECT DETAILS:
+- Title: ${projectTitle}
+- Category: ${projectCategory}
+- Description: ${projectIdea}
+
+FREELANCER PROFILE:
+- Archetype: ${analysisData.archetype}
+- Core Skills: ${analysisData.skills.join(", ")}
+- Target Client: ${analysisData.clientGap}
+
+Generate comprehensive gallery content in this JSON format:
+{
+  "thumbnailPrompt": {
+    "prompt": "A detailed, specific prompt for AI image generation (Gemini/DALL-E style) to create a professional, eye-catching project thumbnail. Include specific visual elements, style, colors, composition. The prompt should be ready to copy and paste into an image generator. Make it 2-3 sentences.",
+    "styleNotes": "Additional notes on the visual style (e.g., 'Modern minimalist', 'Professional corporate')",
+    "colorPalette": ["#hexcolor1", "#hexcolor2", "#hexcolor3"],
+    "compositionTips": "Tips on layout and visual hierarchy for the thumbnail"
+  },
+  "videoScript": {
+    "hook": "Opening 5-10 second attention-grabbing statement",
+    "introduction": "15-second introduction of yourself and what you offer",
+    "mainPoints": [
+      {
+        "point": "Key selling point 1",
+        "duration": "15 seconds",
+        "visualSuggestion": "What to show on screen during this segment"
+      },
+      {
+        "point": "Key selling point 2", 
+        "duration": "15 seconds",
+        "visualSuggestion": "Visual suggestion for this segment"
+      },
+      {
+        "point": "Key selling point 3",
+        "duration": "15 seconds",
+        "visualSuggestion": "Visual suggestion for this segment"
+      }
+    ],
+    "callToAction": "Final 10-second call to action",
+    "totalDuration": "60 seconds",
+    "fullScript": "The complete word-for-word script combining all sections above. This should be natural, conversational, and under 90 seconds when read aloud."
+  },
+  "sampleDocuments": [
+    {
+      "title": "Document 1 Title (e.g., 'Project Requirements Template')",
+      "description": "What this document demonstrates to potential clients",
+      "contentOutline": ["Section 1", "Section 2", "Section 3"],
+      "purpose": "Why this document helps showcase your expertise"
+    },
+    {
+      "title": "Document 2 Title",
+      "description": "Description of document 2",
+      "contentOutline": ["Section 1", "Section 2"],
+      "purpose": "Why this document is valuable"
+    }
+  ],
+  "galleryStrategy": "A 2-3 sentence explanation of why this gallery content will attract ideal clients and how it showcases the freelancer's unique value"
+}
+
+IMPORTANT GUIDELINES:
+- Thumbnail prompt should be specific and ready to paste into Gemini/DALL-E/Midjourney
+- Video script should be conversational and under 90 seconds total
+- Suggest 2-3 sample documents that demonstrate expertise
+- Focus on client outcomes and benefits, not just features
+- Make content professional yet approachable
+
+Return ONLY valid JSON, no additional text.`;
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 3000,
+    temperature: 0,
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+  });
+
+  const content = message.content[0];
+  if (content.type !== "text") {
+    throw new Error("Unexpected response type from AI");
+  }
+
+  const result = content.text;
+  const jsonMatch = result.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("No valid JSON found in AI response");
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (parseError) {
+    throw new Error("AI response contained invalid JSON format");
+  }
+
+  return {
+    thumbnailPrompt: parsed.thumbnailPrompt || {
+      prompt: "",
+      styleNotes: "",
+      colorPalette: [],
+      compositionTips: "",
+    },
+    videoScript: parsed.videoScript || {
+      hook: "",
+      introduction: "",
+      mainPoints: [],
+      callToAction: "",
+      totalDuration: "",
+      fullScript: "",
+    },
+    sampleDocuments: parsed.sampleDocuments || [],
+    galleryStrategy: parsed.galleryStrategy || "",
   };
 }
