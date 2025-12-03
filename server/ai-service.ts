@@ -162,7 +162,9 @@ export async function searchUpworkInsights(query: string): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error("Perplexity API request failed");
+    const errorText = await response.text().catch(() => 'Unable to read error body');
+    console.error(`Perplexity API error: ${response.status} ${response.statusText} - ${errorText}`);
+    throw new Error(`Perplexity API request failed: ${response.status} ${response.statusText}`);
   }
 
   const data = await response.json();
