@@ -2,9 +2,12 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
-import * as pdfParse from "pdf-parse";
+import { createRequire } from "module";
 import { analyzeProfile, generateProjectSuggestions } from "./ai-service";
 import { UPWORK_CATEGORIES, PROJECT_ATTRIBUTES, TITLE_BEST_PRACTICES } from "./upwork-knowledge";
+
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -28,7 +31,7 @@ export async function registerRoutes(
 
       let resumeText: string;
       try {
-        const pdfData = await (pdfParse as any).default(file.buffer);
+        const pdfData = await pdfParse(file.buffer);
         resumeText = pdfData.text;
         
         if (!resumeText || resumeText.trim().length < 50) {
