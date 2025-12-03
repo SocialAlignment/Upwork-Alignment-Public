@@ -2,11 +2,15 @@ export async function uploadProfile(data: {
   resume: File;
   upworkUrl: string;
   linkedinUrl: string;
+  profileContext?: string;
 }) {
   const formData = new FormData();
   formData.append("resume", data.resume);
   formData.append("upworkUrl", data.upworkUrl);
   formData.append("linkedinUrl", data.linkedinUrl);
+  if (data.profileContext) {
+    formData.append("profileContext", data.profileContext);
+  }
 
   const response = await fetch("/api/upload-profile", {
     method: "POST",

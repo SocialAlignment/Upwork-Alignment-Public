@@ -8,6 +8,7 @@ interface ProfileData {
   resumeText: string;
   upworkUrl: string;
   linkedinUrl: string;
+  profileContext?: string;
 }
 
 export async function analyzeProfile(profileData: ProfileData): Promise<Omit<InsertAnalysisResult, 'profileId'>> {
@@ -29,9 +30,15 @@ ${marketContext}
 
 ` : '';
 
+  const existingOverviewSection = profileData.profileContext 
+    ? `EXISTING UPWORK OVERVIEW (User's current profile text - understand their tone and positioning):
+${profileData.profileContext}
+
+` : '';
+
   const prompt = `You are an expert Upwork freelancer consultant. Analyze the following professional profile data and provide strategic insights.
 
-${marketSection}RESUME CONTENT:
+${marketSection}${existingOverviewSection}RESUME CONTENT:
 ${profileData.resumeText}
 
 UPWORK PROFILE: ${profileData.upworkUrl}
@@ -66,6 +73,7 @@ IMPORTANT:
 - Recommend keywords that command premium rates
 - Identify genuine blindspots in their positioning
 - The signatureMechanism should be unique and branded to this specific freelancer's expertise
+- If EXISTING UPWORK OVERVIEW is provided: Use it to understand their current tone, voice, and positioning style. Match their communication style in recommendations. However, use the RESUME to identify the "Strategic Gap" - skills, experience, or positioning they are missing or underutilizing in their current overview.
 
 Return ONLY valid JSON, no additional text.`;
 

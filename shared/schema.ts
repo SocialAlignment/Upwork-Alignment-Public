@@ -8,6 +8,7 @@ export const userProfiles = pgTable("user_profiles", {
   resumeText: text("resume_text").notNull(),
   upworkUrl: text("upwork_url").notNull(),
   linkedinUrl: text("linkedin_url").notNull(),
+  profileContext: text("profile_context"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

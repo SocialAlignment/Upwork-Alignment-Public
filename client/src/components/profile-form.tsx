@@ -2,9 +2,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Link2, Linkedin, ArrowRight } from "lucide-react";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Link2, Linkedin, ArrowRight, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 
 const formSchema = z.object({
@@ -16,6 +17,9 @@ const formSchema = z.object({
     .string()
     .url({ message: "Please enter a valid URL." })
     .regex(/linkedin\.com/, { message: "Must be a LinkedIn profile URL." }),
+  profileContext: z
+    .string()
+    .optional(),
 });
 
 interface ProfileFormProps {
@@ -29,6 +33,7 @@ export function ProfileForm({ onSubmit, isLoading }: ProfileFormProps) {
     defaultValues: {
       upworkUrl: "",
       linkedinUrl: "",
+      profileContext: "",
     },
   });
 
@@ -78,6 +83,31 @@ export function ProfileForm({ onSubmit, isLoading }: ProfileFormProps) {
                       data-testid="input-linkedin-url"
                     />
                   </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="profileContext"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-foreground font-medium flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Upwork Profile Overview (Paste Here)
+                </FormLabel>
+                <FormDescription className="text-muted-foreground text-sm">
+                  Optional but recommended. Paste your existing Upwork profile overview so the AI can match your tone and positioning.
+                </FormDescription>
+                <FormControl>
+                  <Textarea 
+                    placeholder="Paste your current Upwork profile overview/bio here to help the AI understand your existing positioning and voice..."
+                    className="min-h-[120px] bg-card border-border focus-visible:ring-primary/20 transition-all duration-200 resize-y" 
+                    {...field} 
+                    data-testid="input-profile-context"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

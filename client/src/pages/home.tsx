@@ -31,7 +31,7 @@ export default function Home() {
     }
   };
 
-  const handleFormSubmit = async (data: { upworkUrl: string; linkedinUrl: string }) => {
+  const handleFormSubmit = async (data: { upworkUrl: string; linkedinUrl: string; profileContext?: string }) => {
     if (!file) {
       toast({
         title: "Resume Required",
@@ -48,10 +48,15 @@ export default function Home() {
         resume: file,
         upworkUrl: data.upworkUrl,
         linkedinUrl: data.linkedinUrl,
+        profileContext: data.profileContext,
       });
 
       setAnalysisResult(result.analysis);
       setViewState("results");
+      
+      if (result.profileContext) {
+        sessionStorage.setItem("profileContext", result.profileContext);
+      }
       
       toast({
         title: "Analysis Complete",

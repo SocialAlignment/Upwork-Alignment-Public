@@ -26,7 +26,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Resume file is required" });
       }
 
-      const { upworkUrl, linkedinUrl } = req.body;
+      const { upworkUrl, linkedinUrl, profileContext } = req.body;
       
       if (!upworkUrl || !linkedinUrl) {
         return res.status(400).json({ error: "Upwork and LinkedIn URLs are required" });
@@ -54,6 +54,7 @@ export async function registerRoutes(
           resumeText,
           upworkUrl,
           linkedinUrl,
+          profileContext: profileContext || undefined,
         });
       } catch (aiError: any) {
         console.error("AI analysis error:", aiError);
@@ -79,6 +80,7 @@ export async function registerRoutes(
         resumeText,
         upworkUrl,
         linkedinUrl,
+        profileContext: profileContext || null,
       });
 
       const analysis = await storage.createAnalysisResult({
@@ -89,6 +91,7 @@ export async function registerRoutes(
       res.json({
         profileId: profile.id,
         analysis,
+        profileContext: profile.profileContext,
       });
     } catch (error) {
       console.error("Error processing profile:", error);
@@ -100,12 +103,16 @@ export async function registerRoutes(
     try {
       const { profileId } = req.params;
       const analysis = await storage.getAnalysisResultByProfileId(profileId);
+      const profile = await storage.getUserProfile(profileId);
       
       if (!analysis) {
         return res.status(404).json({ error: "Analysis not found" });
       }
 
-      res.json(analysis);
+      res.json({
+        ...analysis,
+        profileContext: profile?.profileContext || null,
+      });
     } catch (error) {
       console.error("Error fetching analysis:", error);
       res.status(500).json({ error: "Failed to fetch analysis" });
