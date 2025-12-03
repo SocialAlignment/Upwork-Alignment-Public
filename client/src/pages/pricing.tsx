@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, RefreshCw, DollarSign, Clock, Info, Check, Plus, X, Sparkles, TrendingUp, Lightbulb } from "lucide-react";
+import { ArrowLeft, ArrowRight, RefreshCw, DollarSign, Clock, Info, Check, Plus, X, Sparkles, TrendingUp, Lightbulb, AlertTriangle, CheckCircle, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -60,6 +60,11 @@ export default function Pricing() {
   const [advancedDays, setAdvancedDays] = useState(7);
   const [advancedPrice, setAdvancedPrice] = useState(0);
   
+  const [starterHours, setStarterHours] = useState(2);
+  const [standardHours, setStandardHours] = useState(5);
+  const [advancedHours, setAdvancedHours] = useState(10);
+  const [targetHourlyRate, setTargetHourlyRate] = useState(100);
+  
   const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
   const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [customAddOn, setCustomAddOn] = useState("");
@@ -115,18 +120,21 @@ export default function Pricing() {
       setStarterDesc(data.tiers.starter.description || "");
       setStarterDays(data.tiers.starter.deliveryDays || 1);
       setStarterPrice(data.tiers.starter.price || 0);
+      setStarterHours(data.tiers.starter.estimatedHours || 2);
     }
     if (data.tiers?.standard) {
       setStandardTitle(data.tiers.standard.title || "");
       setStandardDesc(data.tiers.standard.description || "");
       setStandardDays(data.tiers.standard.deliveryDays || 3);
       setStandardPrice(data.tiers.standard.price || 0);
+      setStandardHours(data.tiers.standard.estimatedHours || 5);
     }
     if (data.tiers?.advanced) {
       setAdvancedTitle(data.tiers.advanced.title || "");
       setAdvancedDesc(data.tiers.advanced.description || "");
       setAdvancedDays(data.tiers.advanced.deliveryDays || 7);
       setAdvancedPrice(data.tiers.advanced.price || 0);
+      setAdvancedHours(data.tiers.advanced.estimatedHours || 10);
     }
     if (data.serviceOptions) {
       setServiceOptions(data.serviceOptions);
@@ -209,139 +217,196 @@ export default function Pricing() {
     setDays: (v: number) => void,
     price: number,
     setPrice: (v: number) => void,
+    hours: number,
+    setHours: (v: number) => void,
     tierData: PricingTier | undefined,
     isRecommended = false
-  ) => (
-    <Card className={`relative ${isRecommended ? 'border-primary border-2 shadow-lg' : ''}`}>
-      {isRecommended && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <Badge className="bg-primary text-primary-foreground">Recommended</Badge>
-        </div>
-      )}
-      <CardHeader className="pb-2">
-        <CardTitle className="text-center">{tierName}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Tier Title</Label>
-            {tierData?.titleRationale && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 px-2 text-xs"
-                onClick={() => showRationale("Title", tierData.titleRationale, tierName)}
-                data-testid={`button-rationale-title-${tierName.toLowerCase()}`}
-              >
-                <Info className="w-3 h-3 mr-1" />
-                Why?
-              </Button>
-            )}
+  ) => {
+    const effectiveRate = hours > 0 ? price / hours : 0;
+    const isSustainable = hours > 0 && effectiveRate >= targetHourlyRate;
+    
+    return (
+      <Card className={`relative ${isRecommended ? 'border-primary border-2 shadow-lg' : ''}`}>
+        {isRecommended && (
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+            <Badge className="bg-primary text-primary-foreground">Recommended</Badge>
           </div>
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Tier title..."
-            maxLength={30}
-            data-testid={`input-title-${tierName.toLowerCase()}`}
-          />
-          <p className="text-xs text-muted-foreground text-right">{title.length}/30</p>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Description</Label>
-            {tierData?.descriptionRationale && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 px-2 text-xs"
-                onClick={() => showRationale("Description", tierData.descriptionRationale, tierName)}
-                data-testid={`button-rationale-desc-${tierName.toLowerCase()}`}
-              >
-                <Info className="w-3 h-3 mr-1" />
-                Why?
-              </Button>
-            )}
-          </div>
-          <Textarea
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            placeholder="What's included..."
-            maxLength={80}
-            className="h-20 resize-none"
-            data-testid={`input-desc-${tierName.toLowerCase()}`}
-          />
-          <p className="text-xs text-muted-foreground text-right">{desc.length}/80</p>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Delivery Days</Label>
-            {tierData?.deliveryRationale && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 px-2 text-xs"
-                onClick={() => showRationale("Delivery Time", tierData.deliveryRationale, tierName)}
-                data-testid={`button-rationale-days-${tierName.toLowerCase()}`}
-              >
-                <Info className="w-3 h-3 mr-1" />
-                Why?
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-muted-foreground" />
+        )}
+        <CardHeader className="pb-2">
+          <CardTitle className="text-center">{tierName}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Tier Title</Label>
+              {tierData?.titleRationale && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 text-xs"
+                  onClick={() => showRationale("Title", tierData.titleRationale, tierName)}
+                  data-testid={`button-rationale-title-${tierName.toLowerCase()}`}
+                >
+                  <Info className="w-3 h-3 mr-1" />
+                  Why?
+                </Button>
+              )}
+            </div>
             <Input
-              type="number"
-              value={days}
-              onChange={(e) => setDays(parseInt(e.target.value) || 1)}
-              min={1}
-              max={365}
-              className="w-24"
-              data-testid={`input-days-${tierName.toLowerCase()}`}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Tier title..."
+              maxLength={30}
+              data-testid={`input-title-${tierName.toLowerCase()}`}
             />
-            <span className="text-sm text-muted-foreground">days</span>
+            <p className="text-xs text-muted-foreground text-right">{title.length}/30</p>
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Price</Label>
-            {tierData?.priceRationale && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 px-2 text-xs"
-                onClick={() => showRationale("Price", tierData.priceRationale, tierName)}
-                data-testid={`button-rationale-price-${tierName.toLowerCase()}`}
-              >
-                <Info className="w-3 h-3 mr-1" />
-                Why?
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-muted-foreground" />
-            <Input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-              min={0}
-              step={5}
-              className="w-32"
-              data-testid={`input-price-${tierName.toLowerCase()}`}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Description</Label>
+              {tierData?.descriptionRationale && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 text-xs"
+                  onClick={() => showRationale("Description", tierData.descriptionRationale, tierName)}
+                  data-testid={`button-rationale-desc-${tierName.toLowerCase()}`}
+                >
+                  <Info className="w-3 h-3 mr-1" />
+                  Why?
+                </Button>
+              )}
+            </div>
+            <Textarea
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              placeholder="What's included..."
+              maxLength={80}
+              className="h-20 resize-none"
+              data-testid={`input-desc-${tierName.toLowerCase()}`}
             />
+            <p className="text-xs text-muted-foreground text-right">{desc.length}/80</p>
           </div>
-        </div>
 
-        <div className="pt-2 border-t">
-          <p className="text-2xl font-bold text-center">${price.toFixed(2)}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Delivery Days</Label>
+              {tierData?.deliveryRationale && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 text-xs"
+                  onClick={() => showRationale("Delivery Time", tierData.deliveryRationale, tierName)}
+                  data-testid={`button-rationale-days-${tierName.toLowerCase()}`}
+                >
+                  <Info className="w-3 h-3 mr-1" />
+                  Why?
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <Input
+                type="number"
+                value={days}
+                onChange={(e) => setDays(parseInt(e.target.value) || 1)}
+                min={1}
+                max={365}
+                className="w-24"
+                data-testid={`input-days-${tierName.toLowerCase()}`}
+              />
+              <span className="text-sm text-muted-foreground">days</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Estimated Hours</Label>
+              {tierData?.estimatedHoursRationale && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 text-xs"
+                  onClick={() => showRationale("Estimated Hours", tierData.estimatedHoursRationale, tierName)}
+                  data-testid={`button-rationale-hours-${tierName.toLowerCase()}`}
+                >
+                  <Info className="w-3 h-3 mr-1" />
+                  Why?
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Timer className="w-4 h-4 text-muted-foreground" />
+              <Input
+                type="number"
+                value={hours}
+                onChange={(e) => setHours(parseFloat(e.target.value) || 1)}
+                min={0.5}
+                step={0.5}
+                className="w-24"
+                data-testid={`input-hours-${tierName.toLowerCase()}`}
+              />
+              <span className="text-sm text-muted-foreground">hrs</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Price</Label>
+              {tierData?.priceRationale && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 text-xs"
+                  onClick={() => showRationale("Price", tierData.priceRationale, tierName)}
+                  data-testid={`button-rationale-price-${tierName.toLowerCase()}`}
+                >
+                  <Info className="w-3 h-3 mr-1" />
+                  Why?
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <Input
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                min={0}
+                step={5}
+                className="w-32"
+                data-testid={`input-price-${tierName.toLowerCase()}`}
+              />
+            </div>
+          </div>
+
+          <div className="pt-3 border-t space-y-3">
+            <p className="text-2xl font-bold text-center">${price.toFixed(2)}</p>
+            
+            <div className={`rounded-lg p-3 ${isSustainable ? 'bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800' : 'bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800'}`}>
+              <div className="flex items-center justify-center gap-2 mb-1">
+                {isSustainable ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700 dark:text-green-400" data-testid={`badge-sustainable-${tierName.toLowerCase()}`}>Sustainable</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="w-4 h-4 text-orange-600" />
+                    <span className="text-sm font-medium text-orange-700 dark:text-orange-400" data-testid={`badge-low-margin-${tierName.toLowerCase()}`}>Low Margin</span>
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-center text-muted-foreground">
+                Effective Rate: <span className={`font-semibold ${isSustainable ? 'text-green-600' : 'text-orange-600'}`}>${effectiveRate.toFixed(0)}/hr</span>
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (error) {
     return (
@@ -409,6 +474,38 @@ export default function Pricing() {
                 </p>
               </div>
 
+              <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
+                        <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-sm">My Target Hourly Rate</h3>
+                        <p className="text-xs text-muted-foreground">Used to calculate if each tier is sustainable for you</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 border">
+                        <DollarSign className="w-4 h-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          value={targetHourlyRate}
+                          onChange={(e) => setTargetHourlyRate(parseFloat(e.target.value) || 50)}
+                          min={10}
+                          max={1000}
+                          step={10}
+                          className="w-20 h-8 border-0 p-0 text-center font-semibold"
+                          data-testid="input-target-hourly-rate"
+                        />
+                        <span className="text-sm text-muted-foreground">/hr</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {isLoading ? (
                 <Card>
                   <CardContent className="pt-6 space-y-6">
@@ -458,6 +555,7 @@ export default function Pricing() {
                               starterDesc, setStarterDesc,
                               starterDays, setStarterDays,
                               starterPrice, setStarterPrice,
+                              starterHours, setStarterHours,
                               suggestions?.tiers?.starter
                             )}
                             {renderTierCard(
@@ -466,6 +564,7 @@ export default function Pricing() {
                               standardDesc, setStandardDesc,
                               standardDays, setStandardDays,
                               standardPrice, setStandardPrice,
+                              standardHours, setStandardHours,
                               suggestions?.tiers?.standard,
                               true
                             )}
@@ -475,6 +574,7 @@ export default function Pricing() {
                               advancedDesc, setAdvancedDesc,
                               advancedDays, setAdvancedDays,
                               advancedPrice, setAdvancedPrice,
+                              advancedHours, setAdvancedHours,
                               suggestions?.tiers?.advanced
                             )}
                           </>
@@ -485,6 +585,7 @@ export default function Pricing() {
                             standardDesc, setStandardDesc,
                             standardDays, setStandardDays,
                             standardPrice, setStandardPrice,
+                            standardHours, setStandardHours,
                             suggestions?.tiers?.standard
                           )
                         )}
