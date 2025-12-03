@@ -54,7 +54,7 @@ export default function ProjectIdea() {
               data-testid="button-back"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Dashboard
+              Back to Resume Analysis
             </Button>
             <Badge variant="secondary" className="gap-1">
               <Sparkles className="w-3 h-3" />
@@ -136,7 +136,7 @@ Delivery: 2-3 weeks for MVP, with ongoing support available.`}
           <div className="flex items-center justify-between pt-4">
             <Button variant="outline" onClick={() => navigate("/")} className="gap-2" data-testid="button-back-bottom">
               <ArrowLeft className="w-4 h-4" />
-              Back to Dashboard
+              Back to Resume Analysis
             </Button>
             <Button 
               onClick={handleContinue}
