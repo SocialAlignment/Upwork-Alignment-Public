@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
 import {
   type UserProfile,
   type InsertUserProfile,
@@ -28,8 +28,8 @@ class DatabaseStorage implements IStorage {
   private db;
 
   constructor() {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    this.db = drizzle(pool);
+    const sql = neon(process.env.DATABASE_URL!);
+    this.db = drizzle(sql);
   }
 
   async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
