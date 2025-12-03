@@ -53,6 +53,8 @@ interface PricingTier {
 interface ProjectData {
   title: string;
   category?: string;
+  archetype?: string;
+  signatureMechanism?: string;
   pricing?: {
     use3Tiers?: boolean;
     targetHourlyRate?: number;
@@ -97,10 +99,53 @@ interface ProjectData {
   profileContext?: string;
 }
 
+function calculateProfitabilityStatus(pricing: ProjectData['pricing']): string {
+  if (!pricing?.tiers.standard) return 'Unknown';
+  const tier = pricing.tiers.standard;
+  const hours = tier.estimatedHours || 0;
+  const targetRate = pricing.targetHourlyRate || 100;
+  if (hours === 0) return 'Needs Review';
+  const effectiveRate = tier.price / hours;
+  if (effectiveRate >= targetRate * 1.2) return 'High Margin';
+  if (effectiveRate >= targetRate) return 'Sustainable';
+  if (effectiveRate >= targetRate * 0.8) return 'Low Margin';
+  return 'Unsustainable';
+}
+
 export async function createNotionPage(databaseId: string, projectData: ProjectData): Promise<{ pageId: string; url: string }> {
   const notion = await getUncachableNotionClient();
   
   const children: any[] = [];
+
+  if (projectData.profileContext) {
+    children.push({
+      object: 'block',
+      type: 'callout',
+      callout: {
+        rich_text: [{ type: 'text', text: { content: `Profile Context: ${projectData.profileContext}` } }],
+        icon: { emoji: '👤' }
+      }
+    });
+  }
+
+  if (projectData.archetype || projectData.signatureMechanism) {
+    children.push({
+      object: 'block',
+      type: 'callout',
+      callout: {
+        rich_text: [{ 
+          type: 'text', 
+          text: { 
+            content: [
+              projectData.archetype ? `Archetype: ${projectData.archetype}` : '',
+              projectData.signatureMechanism ? `Signature: ${projectData.signatureMechanism}` : ''
+            ].filter(Boolean).join(' • ')
+          } 
+        }],
+        icon: { emoji: '🎯' }
+      }
+    });
+  }
 
   children.push({
     object: 'block',
@@ -205,6 +250,30 @@ export async function createNotionPage(databaseId: string, projectData: ProjectD
           type: 'bulleted_list_item',
           bulleted_list_item: {
             rich_text: [{ type: 'text', text: { content: `${addon.name}: +$${addon.price}` } }]
+          }
+        });
+      }
+    }
+
+    if (projectData.pricing.serviceOptions && projectData.pricing.serviceOptions.length > 0) {
+      children.push({
+        object: 'block',
+        type: 'heading_3',
+        heading_3: {
+          rich_text: [{ type: 'text', text: { content: 'Service Options Comparison' } }]
+        }
+      });
+      for (const option of projectData.pricing.serviceOptions) {
+        const tiers = [
+          option.starterIncluded ? '✓ Starter' : '',
+          option.standardIncluded ? '✓ Standard' : '',
+          option.advancedIncluded ? '✓ Advanced' : ''
+        ].filter(Boolean).join(' | ');
+        children.push({
+          object: 'block',
+          type: 'bulleted_list_item',
+          bulleted_list_item: {
+            rich_text: [{ type: 'text', text: { content: `${option.name}: ${tiers || 'Not included'}` } }]
           }
         });
       }
@@ -369,15 +438,50 @@ export async function createNotionPage(databaseId: string, projectData: ProjectD
     }
   }
 
-  const response = await notion.pages.create({
-    parent: { database_id: databaseId },
-    properties: {
-      title: {
-        title: [{ text: { content: projectData.title || 'Untitled Project' } }]
-      }
-    },
-    children: children
-  });
+  const standardPrice = projectData.pricing?.tiers.standard?.price || 0;
+  const targetRate = projectData.pricing?.targetHourlyRate || 100;
+  const profitabilityStatus = calculateProfitabilityStatus(projectData.pricing);
+
+  const baseProperties: Record<string, any> = {
+    title: {
+      title: [{ text: { content: projectData.title || 'Untitled Project' } }]
+    }
+  };
+
+  const optionalProperties: Record<string, any> = {};
+  if (projectData.category) {
+    optionalProperties['Category'] = { select: { name: projectData.category } };
+  }
+  if (projectData.archetype) {
+    optionalProperties['Archetype'] = { rich_text: [{ text: { content: projectData.archetype } }] };
+  }
+  if (standardPrice > 0) {
+    optionalProperties['Price'] = { number: standardPrice };
+  }
+  if (targetRate > 0) {
+    optionalProperties['Target Rate'] = { number: targetRate };
+  }
+  optionalProperties['Profitability'] = { select: { name: profitabilityStatus } };
+  optionalProperties['Status'] = { select: { name: 'Draft' } };
+
+  let response;
+  try {
+    response = await notion.pages.create({
+      parent: { database_id: databaseId },
+      properties: { ...baseProperties, ...optionalProperties },
+      children: children
+    });
+  } catch (error: any) {
+    if (error?.code === 'validation_error' && error?.message?.includes('property')) {
+      response = await notion.pages.create({
+        parent: { database_id: databaseId },
+        properties: baseProperties,
+        children: children
+      });
+    } else {
+      throw error;
+    }
+  }
 
   return {
     pageId: response.id,

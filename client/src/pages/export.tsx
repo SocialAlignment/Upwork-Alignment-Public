@@ -185,6 +185,8 @@ export default function Export() {
           projectData: {
             title: exportData.projectTitle,
             category: exportData.projectCategory,
+            archetype: exportData.analysis?.archetype,
+            signatureMechanism: exportData.analysis?.signatureMechanism,
             pricing: exportData.pricing,
             gallery: exportData.gallery,
             process: exportData.process,
