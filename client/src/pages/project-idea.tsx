@@ -38,6 +38,8 @@ export default function ProjectIdea() {
       return;
     }
 
+    // Clear any cached suggestions since we have a new project idea
+    sessionStorage.removeItem("projectSuggestions");
     sessionStorage.setItem("projectIdea", projectIdea);
     navigate("/project-creation");
   };

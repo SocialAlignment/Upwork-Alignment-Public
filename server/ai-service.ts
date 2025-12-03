@@ -52,6 +52,7 @@ Return ONLY valid JSON, no additional text.`;
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 1024,
+    temperature: 0,
     messages: [
       {
         role: "user",
@@ -129,8 +130,8 @@ export async function searchUpworkInsights(query: string): Promise<string> {
           content: query,
         },
       ],
-      temperature: 0.2,
-      top_p: 0.9,
+      temperature: 0,
+      top_p: 0.1,
     }),
   });
 
@@ -239,6 +240,7 @@ Return ONLY valid JSON, no additional text.`;
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 2048,
+    temperature: 0,
     messages: [
       {
         role: "user",
