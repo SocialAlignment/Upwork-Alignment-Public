@@ -14,21 +14,20 @@ interface ProfileData {
 export async function analyzeProfile(profileData: ProfileData): Promise<Omit<InsertAnalysisResult, 'profileId'>> {
   const resumeSnippet = profileData.resumeText.slice(0, 1500);
   
-  let marketContext = "";
-  try {
-    marketContext = await searchUpworkInsights(
-      `Identify the top 3 high-value freelancer archetypes and common client complaints for a professional with this experience: ${resumeSnippet}`
-    );
-  } catch (error) {
-    console.error("Market research failed, continuing without context:", error);
-    marketContext = "";
+  const marketContext = await searchUpworkInsights(
+    `Identify the top 3 high-value freelancer archetypes and common client complaints for a professional with this experience: ${resumeSnippet}`
+  ).catch((error) => {
+    throw new Error("Market Research Failed: Cannot proceed without live data. Please try again.");
+  });
+
+  if (!marketContext || marketContext.trim() === "") {
+    throw new Error("Market Research Failed: Cannot proceed without live data. Please try again.");
   }
 
-  const marketSection = marketContext 
-    ? `LIVE MARKET RESEARCH (Current Upwork trends and insights):
+  const marketSection = `LIVE MARKET RESEARCH (Current Upwork trends and insights):
 ${marketContext}
 
-` : '';
+`;
 
   const existingOverviewSection = profileData.profileContext 
     ? `EXISTING UPWORK OVERVIEW (User's current profile text - understand their tone and positioning):
@@ -44,7 +43,7 @@ ${profileData.resumeText}
 UPWORK PROFILE: ${profileData.upworkUrl}
 LINKEDIN PROFILE: ${profileData.linkedinUrl}
 
-Based on the profile data${marketContext ? ' and market research' : ''}, provide a comprehensive analysis in the following JSON format:
+Based on the profile data and market research, provide a comprehensive analysis in the following JSON format:
 
 {
   "archetype": "A short professional title/archetype (e.g., 'Senior Full Stack Engineer', 'Technical Content Strategist')",
@@ -218,12 +217,12 @@ export async function generateProjectSuggestions(
   
   Please provide specific, actionable insights with examples based on current Upwork trends.`;
 
-  let marketInsights = "";
-  try {
-    marketInsights = await searchUpworkInsights(marketResearchQuery);
-  } catch (error) {
-    console.error("Perplexity market research failed:", error);
-    marketInsights = "";
+  const marketInsights = await searchUpworkInsights(marketResearchQuery).catch((error) => {
+    throw new Error("Market Research Failed: Cannot proceed without live data. Please try again.");
+  });
+
+  if (!marketInsights || marketInsights.trim() === "") {
+    throw new Error("Market Research Failed: Cannot proceed without live data. Please try again.");
   }
 
   const availableCategories = level1Categories.map(l1 => {
@@ -231,13 +230,12 @@ export async function generateProjectSuggestions(
     return `${l1}: ${l2s.slice(0, 5).join(", ")}${l2s.length > 5 ? '...' : ''}`;
   }).join("\n");
 
-  const marketSection = marketInsights 
-    ? `CURRENT MARKET RESEARCH:
+  const marketSection = `CURRENT MARKET RESEARCH:
 ${marketInsights}
 
-` : '';
+`;
 
-  const prompt = `You are an expert Upwork project optimization consultant. Based on the freelancer's project idea and profile analysis${marketInsights ? ', along with current market research' : ''}, generate optimized project catalog suggestions.
+  const prompt = `You are an expert Upwork project optimization consultant. Based on the freelancer's project idea, profile analysis, and current market research, generate optimized project catalog suggestions.
 
 PROJECT IDEA FROM FREELANCER:
 ${projectIdea}
@@ -359,21 +357,20 @@ export async function generatePricingSuggestions(
   
   Provide specific dollar amounts and timeframes based on current Upwork market data.`;
 
-  let pricingInsights = "";
-  try {
-    pricingInsights = await searchUpworkInsights(pricingResearchQuery);
-  } catch (error) {
-    console.error("Perplexity pricing research failed:", error);
-    pricingInsights = "";
+  const pricingInsights = await searchUpworkInsights(pricingResearchQuery).catch((error) => {
+    throw new Error("Market Research Failed: Cannot proceed without live pricing data. Please try again.");
+  });
+
+  if (!pricingInsights || pricingInsights.trim() === "") {
+    throw new Error("Market Research Failed: Cannot proceed without live pricing data. Please try again.");
   }
 
-  const marketSection = pricingInsights 
-    ? `CURRENT MARKET RESEARCH:
+  const marketSection = `CURRENT MARKET RESEARCH:
 ${pricingInsights}
 
-` : '';
+`;
 
-  const prompt = `You are an expert Upwork pricing strategist. Based on the freelancer's profile and project${pricingInsights ? ', along with current market research' : ''}, generate optimal pricing tier recommendations.
+  const prompt = `You are an expert Upwork pricing strategist. Based on the freelancer's profile, project, and current market research, generate optimal pricing tier recommendations.
 
 PROJECT DETAILS:
 - Title: ${projectTitle}
@@ -945,6 +942,34 @@ export async function generateDescriptionSuggestions(
     steps: { title: string; description: string }[];
   }
 ): Promise<DescriptionSuggestion> {
+  const descriptionResearchQuery = `What are successful project descriptions and FAQ strategies for Upwork freelancers offering: "${projectIdea.slice(0, 150)}"
+  
+  For a freelancer with:
+  - Role: ${analysisData.archetype}
+  - Skills: ${analysisData.skills.slice(0, 3).join(", ")}
+  - Target client: ${analysisData.clientGap}
+  
+  Focus on:
+  1. What messaging resonates with clients looking for this type of service?
+  2. What common questions do clients ask before purchasing?
+  3. What objections need to be addressed in the description?
+  4. What makes project descriptions convert better?
+  
+  Provide specific examples and insights based on current Upwork trends.`;
+
+  const descriptionInsights = await searchUpworkInsights(descriptionResearchQuery).catch((error) => {
+    throw new Error("Market Research Failed: Cannot proceed without live data. Please try again.");
+  });
+
+  if (!descriptionInsights || descriptionInsights.trim() === "") {
+    throw new Error("Market Research Failed: Cannot proceed without live data. Please try again.");
+  }
+
+  const marketSection = `CURRENT MARKET RESEARCH:
+${descriptionInsights}
+
+`;
+
   const pricingSection = pricingData ? `
 PRICING TIERS:
 ${pricingData.tiers.starter ? `- Starter: "${pricingData.tiers.starter.title}" - $${pricingData.tiers.starter.price}` : ""}
@@ -963,9 +988,9 @@ Steps: ${processData.steps.map(s => s.title).join(" → ")}
 ${analysisData.projects.map((p: { name: string; type: string }) => `- ${p.name} (${p.type})`).join("\n")}`
     : "";
 
-  const prompt = `You are an expert Upwork project consultant. Generate a compelling project summary and FAQs for a freelancer's project listing.
+  const prompt = `You are an expert Upwork project consultant. Based on market research, generate a compelling project summary and FAQs for a freelancer's project listing.
 
-PROJECT DETAILS:
+${marketSection}PROJECT DETAILS:
 - Title: ${projectTitle}
 - Category: ${projectCategory}
 - Description: ${projectIdea}
@@ -1001,15 +1026,24 @@ Generate in this JSON format:
 {
   "projectSummary": "Compelling 120-1200 character project summary that sells the freelancer's unique value",
   "projectSummaryRationale": "Why this summary works for this specific archetype and target client",
+  "projectSummarySource": "Based on [Specific Data Point] found in market research: cite the specific insight from CURRENT MARKET RESEARCH that informed this summary",
   "faqs": [
     {
       "question": "Natural question clients commonly ask about this type of project",
       "answer": "Concise, helpful answer (50-200 chars)",
-      "rationale": "Why this FAQ addresses a key concern for ${analysisData.clientGap}"
+      "rationale": "Why this FAQ addresses a key concern for ${analysisData.clientGap}",
+      "rationaleSource": "Based on [Specific Data Point] found in market research: cite the specific insight that shows this is a common question"
     }
   ],
-  "descriptionStrategy": "2-3 sentence explanation of how this description positions the freelancer effectively"
+  "descriptionStrategy": "2-3 sentence explanation of how this description positions the freelancer effectively",
+  "descriptionStrategySource": "Based on [Specific Data Point] found in market research: cite the specific insight that informed this strategy"
 }
+
+CRITICAL ZERO-HALLUCINATION REQUIREMENTS:
+- EVERY suggestion MUST have a corresponding "Source" field citing specific data from CURRENT MARKET RESEARCH
+- Do NOT invent or assume market data - only use what is provided in the research above
+- Each "rationaleSource" and "Source" field MUST start with "Based on [Specific Data Point] found in market research:"
+- If you cannot cite specific research data for a suggestion, do not include it
 
 IMPORTANT GUIDELINES:
 - Project summary must reflect the ${analysisData.archetype} archetype
@@ -1051,10 +1085,27 @@ Return ONLY valid JSON, no additional text.`;
     throw new Error("AI response contained invalid JSON format");
   }
 
+  if (!parsed.projectSummarySource || !parsed.projectSummarySource.includes("Based on")) {
+    throw new Error("Zero Hallucination Policy Violation: projectSummarySource must cite market research data");
+  }
+  
+  if (!parsed.descriptionStrategySource || !parsed.descriptionStrategySource.includes("Based on")) {
+    throw new Error("Zero Hallucination Policy Violation: descriptionStrategySource must cite market research data");
+  }
+  
+  const faqs = parsed.faqs || [];
+  for (const faq of faqs) {
+    if (!faq.rationaleSource || !faq.rationaleSource.includes("Based on")) {
+      throw new Error("Zero Hallucination Policy Violation: Each FAQ rationaleSource must cite market research data");
+    }
+  }
+
   return {
     projectSummary: parsed.projectSummary || "",
     projectSummaryRationale: parsed.projectSummaryRationale || "",
-    faqs: parsed.faqs || [],
+    projectSummarySource: parsed.projectSummarySource || "",
+    faqs: faqs,
     descriptionStrategy: parsed.descriptionStrategy || "",
+    descriptionStrategySource: parsed.descriptionStrategySource || "",
   };
 }

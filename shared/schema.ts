@@ -190,11 +190,14 @@ export interface FAQ {
   question: string;
   answer: string;
   rationale: string;
+  rationaleSource?: string;
 }
 
 export interface DescriptionSuggestion {
   projectSummary: string;
   projectSummaryRationale: string;
+  projectSummarySource?: string;
   faqs: FAQ[];
   descriptionStrategy: string;
+  descriptionStrategySource?: string;
 }
