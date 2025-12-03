@@ -125,3 +125,37 @@ export interface PricingSuggestion {
   pricingStrategy: string;
   marketContext: string;
 }
+
+export interface ThumbnailPrompt {
+  prompt: string;
+  styleNotes: string;
+  colorPalette: string[];
+  compositionTips: string;
+}
+
+export interface VideoScript {
+  hook: string;
+  introduction: string;
+  mainPoints: Array<{
+    point: string;
+    duration: string;
+    visualSuggestion: string;
+  }>;
+  callToAction: string;
+  totalDuration: string;
+  fullScript: string;
+}
+
+export interface SampleDocument {
+  title: string;
+  description: string;
+  contentOutline: string[];
+  purpose: string;
+}
+
+export interface GallerySuggestion {
+  thumbnailPrompt: ThumbnailPrompt;
+  videoScript: VideoScript;
+  sampleDocuments: SampleDocument[];
+  galleryStrategy: string;
+}
