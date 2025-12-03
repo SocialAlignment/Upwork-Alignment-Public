@@ -18,31 +18,27 @@ import { Progress } from "@/components/ui/progress";
 import { EditAnalysisDialog, type AnalysisData } from "./edit-analysis-dialog";
 
 interface AnalysisDashboardProps {
+  initialData: any;
   onContinue: () => void;
 }
 
-const DEFAULT_DATA: AnalysisData = {
-  archetype: "Senior Full Stack Engineer",
-  proficiency: 92,
-  skills: ["React", "TypeScript", "Node.js", "System Architecture", "API Design", "AWS"],
-  projects: [
-    { name: "E-commerce Platform Migration", type: "Enterprise" },
-    { name: "Real-time Analytics Dashboard", type: "SaaS" },
-  ],
-  gapTitle: "High-Value Gap Detected",
-  gapDescription: "Your profile emphasizes 'Development' but misses 'Consultancy' keywords that drive 30% higher rates.",
-  suggestedPivot: "Position as 'Technical Partner' rather than just 'Developer'",
-  missingSkillCluster: "Missing Skill Cluster",
-  missingSkill: "AI Integration",
-  missingSkillDesc: "High demand for 'LLM Integration' in your stack.",
-  clientGapType: "Client Type Gap",
-  clientGap: "FinTech",
-  clientGapDesc: "Your security exp. is perfect for high-paying FinTech roles.",
-  recommendedKeywords: ["Scalability Strategy", "Technical Leadership", "RAG Implementation", "Cloud Cost Optimization", "SOC2 Compliance"]
-};
-
-export function AnalysisDashboard({ onContinue }: AnalysisDashboardProps) {
-  const [data, setData] = useState<AnalysisData>(DEFAULT_DATA);
+export function AnalysisDashboard({ initialData, onContinue }: AnalysisDashboardProps) {
+  const [data, setData] = useState<AnalysisData>({
+    archetype: initialData.archetype,
+    proficiency: initialData.proficiency,
+    skills: initialData.skills,
+    projects: initialData.projects,
+    gapTitle: initialData.gapTitle,
+    gapDescription: initialData.gapDescription,
+    suggestedPivot: initialData.suggestedPivot,
+    missingSkillCluster: initialData.missingSkillCluster,
+    missingSkill: initialData.missingSkill,
+    missingSkillDesc: initialData.missingSkillDesc,
+    clientGapType: initialData.clientGapType,
+    clientGap: initialData.clientGap,
+    clientGapDesc: initialData.clientGapDesc,
+    recommendedKeywords: initialData.recommendedKeywords,
+  });
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-8" data-testid="analysis-dashboard">

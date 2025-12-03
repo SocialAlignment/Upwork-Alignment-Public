@@ -1,8 +1,8 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
-import pdfParse from "pdf-parse";
+import * as pdfParse from "pdf-parse";
 import { analyzeProfile } from "./ai-service";
 import { UPWORK_CATEGORIES, PROJECT_ATTRIBUTES, TITLE_BEST_PRACTICES } from "./upwork-knowledge";
 
@@ -13,9 +13,10 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
-  app.post("/api/upload-profile", upload.single("resume"), async (req, res) => {
+  app.post("/api/upload-profile", upload.single("resume"), async (req: Request, res) => {
     try {
-      if (!req.file) {
+      const file = (req as any).file;
+      if (!file) {
         return res.status(400).json({ error: "Resume file is required" });
       }
 
@@ -25,7 +26,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Upwork and LinkedIn URLs are required" });
       }
 
-      const pdfData = await pdfParse(req.file.buffer);
+      const pdfData = await (pdfParse as any).default(file.buffer);
       const resumeText = pdfData.text;
 
       const profile = await storage.createUserProfile({

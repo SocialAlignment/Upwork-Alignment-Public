@@ -6,15 +6,18 @@ import { AnalysisDashboard } from "@/components/analysis-dashboard";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { uploadProfile } from "@/lib/api";
+import type { AnalysisResult } from "@shared/schema";
 
 type ViewState = "input" | "analyzing" | "results";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [viewState, setViewState] = useState<ViewState>("input");
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const { toast } = useToast();
 
-  const handleFormSubmit = (data: { upworkUrl: string; linkedinUrl: string }) => {
+  const handleFormSubmit = async (data: { upworkUrl: string; linkedinUrl: string }) => {
     if (!file) {
       toast({
         title: "Resume Required",
@@ -24,16 +27,31 @@ export default function Home() {
       return;
     }
 
-    console.log("Submitting:", { file, ...data });
     setViewState("analyzing");
-  };
 
-  const handleAnalysisComplete = () => {
-    setViewState("results");
-    toast({
-      title: "Analysis Complete",
-      description: "Your profile intelligence report is ready.",
-    });
+    try {
+      const result = await uploadProfile({
+        resume: file,
+        upworkUrl: data.upworkUrl,
+        linkedinUrl: data.linkedinUrl,
+      });
+
+      setAnalysisResult(result.analysis);
+      setViewState("results");
+      
+      toast({
+        title: "Analysis Complete",
+        description: "Your profile intelligence report is ready.",
+      });
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({
+        title: "Analysis Failed",
+        description: error instanceof Error ? error.message : "An error occurred during analysis.",
+        variant: "destructive",
+      });
+      setViewState("input");
+    }
   };
 
   return (
@@ -106,18 +124,34 @@ export default function Home() {
               exit={{ opacity: 0, y: -20 }}
               className="w-full flex justify-center"
             >
-              <AnalysisLoader onComplete={handleAnalysisComplete} />
+              <div className="w-full max-w-md mx-auto p-8 bg-card border border-border rounded-2xl shadow-lg" data-testid="analysis-loader">
+                <div className="mb-8 text-center">
+                  <div className="inline-block p-4 rounded-full bg-primary/10 mb-4 relative">
+                    <Sparkles className="w-8 h-8 text-primary animate-pulse" />
+                    <div className="absolute inset-0 rounded-full border border-primary/30 animate-ping" />
+                  </div>
+                  <h3 className="text-xl font-serif font-semibold text-foreground">
+                    Analyzing Profile with AI
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    This may take 10-20 seconds...
+                  </p>
+                </div>
+              </div>
             </motion.div>
           )}
 
-          {viewState === "results" && (
+          {viewState === "results" && analysisResult && (
             <motion.div
               key="results"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="w-full"
             >
-              <AnalysisDashboard onContinue={() => console.log("Continue to next step")} />
+              <AnalysisDashboard 
+                initialData={analysisResult}
+                onContinue={() => console.log("Continue to next step")} 
+              />
             </motion.div>
           )}
         </AnimatePresence>
