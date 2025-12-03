@@ -1,9 +1,7 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import type { InsertAnalysisResult } from "@shared/schema";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const anthropic = new Anthropic();
 
 interface ProfileData {
   resumeText: string;
@@ -50,28 +48,30 @@ IMPORTANT:
 
 Return ONLY valid JSON, no additional text.`;
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 1024,
     messages: [
-      {
-        role: "system",
-        content: "You are an expert Upwork consultant who helps freelancers optimize their profiles for premium rates. Always respond with valid JSON only.",
-      },
       {
         role: "user",
         content: prompt,
       },
     ],
-    temperature: 0.7,
-    response_format: { type: "json_object" },
   });
 
-  const result = completion.choices[0].message.content;
-  if (!result) {
-    throw new Error("No response from AI");
+  const content = message.content[0];
+  if (content.type !== "text") {
+    throw new Error("Unexpected response type from AI");
   }
 
-  const parsed = JSON.parse(result);
+  const result = content.text;
+  
+  const jsonMatch = result.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("No valid JSON found in AI response");
+  }
+
+  const parsed = JSON.parse(jsonMatch[0]);
   
   return {
     archetype: parsed.archetype,
@@ -89,4 +89,36 @@ Return ONLY valid JSON, no additional text.`;
     clientGapDesc: parsed.clientGapDesc,
     recommendedKeywords: parsed.recommendedKeywords,
   };
+}
+
+export async function searchUpworkInsights(query: string): Promise<string> {
+  const response = await fetch("https://api.perplexity.ai/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "llama-3.1-sonar-small-128k-online",
+      messages: [
+        {
+          role: "system",
+          content: "You are a freelance market research expert. Provide factual, current insights about Upwork trends, pricing, and successful strategies.",
+        },
+        {
+          role: "user",
+          content: query,
+        },
+      ],
+      temperature: 0.2,
+      top_p: 0.9,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Perplexity API request failed");
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content;
 }
