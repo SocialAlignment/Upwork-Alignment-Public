@@ -85,3 +85,43 @@ export interface ProjectSuggestion {
   }>;
   marketInsights: string;
 }
+
+export interface PricingTier {
+  name: string;
+  title: string;
+  titleRationale: string;
+  description: string;
+  descriptionRationale: string;
+  deliveryDays: number;
+  deliveryRationale: string;
+  price: number;
+  priceRationale: string;
+  features: string[];
+  featuresRationale: string;
+}
+
+export interface ServiceOption {
+  name: string;
+  starterIncluded: boolean;
+  standardIncluded: boolean;
+  advancedIncluded: boolean;
+  rationale: string;
+}
+
+export interface AddOn {
+  name: string;
+  price: number;
+  rationale: string;
+}
+
+export interface PricingSuggestion {
+  tiers: {
+    starter: PricingTier;
+    standard: PricingTier;
+    advanced: PricingTier;
+  };
+  serviceOptions: ServiceOption[];
+  addOns: AddOn[];
+  pricingStrategy: string;
+  marketContext: string;
+}
