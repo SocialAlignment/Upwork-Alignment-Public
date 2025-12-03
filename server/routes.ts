@@ -6,8 +6,8 @@ import { analyzeProfile, generateProjectSuggestions } from "./ai-service";
 import { UPWORK_CATEGORIES, PROJECT_ATTRIBUTES, TITLE_BEST_PRACTICES } from "./upwork-knowledge";
 
 async function parsePdf(buffer: Buffer): Promise<string> {
-  const pdfParse = (await import("pdf-parse")).default;
-  const data = await pdfParse(buffer);
+  const { PDFParse } = await import("pdf-parse");
+  const data = await PDFParse(buffer);
   return data.text;
 }
 
