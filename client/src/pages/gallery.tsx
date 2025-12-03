@@ -662,6 +662,7 @@ export default function Gallery() {
                 <Button 
                   className="gap-2"
                   disabled={isLoading}
+                  onClick={() => navigate("/process")}
                   data-testid="button-continue"
                 >
                   Continue to Process
