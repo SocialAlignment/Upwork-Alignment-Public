@@ -1,0 +1,59 @@
+The Pricing Logic is too broad. It is creating "Bundles" of unrelated services instead of "Tiers" of the SAME service. I need to fix this to keep prices competitive.
+
+Please UPDATE `server/ai-service.ts` inside `generatePricingSuggestions`.
+REPLACE the `prompt` string with this strictly scoped version:
+
+const prompt = \`You are an expert Upwork pricing strategist. Your goal is to structure pricing for a SINGLE specific service, based on SCOPE and DELIVERABLES, not by bundling unrelated services.
+
+PROJECT: "\${projectTitle}" (${projectCategory})
+IDEA: "\${projectIdea}"
+
+CRITICAL PRICING RULES (STAY IN YOUR LANE):
+1. NO SERVICE BLOAT: If the project is "Music Production", do NOT include "Marketing" or "Social Media" in the tiers.
+2. COMPETITIVE ANCHORING: The "Standard" tier must be the market rate for a professional, complete result. Do not inflate it.
+3. TIER STRUCTURE (SCOPE BASED):
+   - STARTER: "The Minimum Viable Result". (e.g., Basic Audio Clean, Rough Draft, Template-based). Low effort, low price.
+   - STANDARD: "The Professional Standard". (e.g., Broadcast Ready, Full Production, Custom Design). This is what 80% of clients want.
+   - ADVANCED: "The Power User Pack". (e.g., Includes Source Files, Stems, Commercial Rights, Extra Revisions). SAME service, but with more ASSETS/RIGHTS.
+
+MARKET CONTEXT:
+\${marketSection}
+
+Generate 3 tiers in JSON format:
+{
+  "tiers": {
+    "starter": {
+      "name": "Starter",
+      "title": "Clear scope title (e.g. 'Basic Clean')",
+      "description": "Strictly limited scope description",
+      "price": (Competitive entry price),
+      "deliveryDays": (Fast),
+      "features": ["Core Deliverable Only", "Standard Resolution/Quality"],
+      "estimatedHours": (Low)
+    },
+    "standard": {
+      "name": "Standard",
+      "title": "Core offer title (e.g. 'Broadcast Ready')",
+      "description": "Full professional deliverable",
+      "price": (Market average),
+      "deliveryDays": (Standard),
+      "features": ["High Resolution/Quality", "Commercial Use", "1 Revision Round"],
+      "estimatedHours": (Medium)
+    },
+    "advanced": {
+      "name": "Advanced",
+      "title": "Premium title (e.g. 'Full Source Access')",
+      "description": "For clients who need control/ownership",
+      "price": (Premium but justified by assets),
+      "deliveryDays": (Standard + Buffer),
+      "features": ["Include Source Files/Stems", "Unlimited Revisions", "Priority Support"],
+      "estimatedHours": (High)
+    }
+  },
+  "addOns": [
+    { "name": "Speed Delivery", "price": 50, "rationale": "High Margin" },
+    { "name": "Source File Release", "price": 150, "rationale": "High Value Asset" }
+  ]
+}
+
+Return ONLY valid JSON.\`;

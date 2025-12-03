@@ -376,115 +376,105 @@ ${pricingInsights}
 
 `;
 
-  const prompt = `You are an expert Upwork pricing strategist. Based on the freelancer's profile, project, and current market research, generate optimal pricing tier recommendations.
+  const prompt = `You are an expert Upwork pricing strategist. Your goal is to structure pricing for a SINGLE specific service, based on SCOPE and DELIVERABLES, not by bundling unrelated services.
 
-PROJECT DETAILS:
-- Title: ${projectTitle}
-- Category: ${projectCategory}
-- Description: ${projectIdea}
+PROJECT: "${projectTitle}" (${projectCategory})
+IDEA: "${projectIdea}"
 
-FREELANCER PROFILE:
+CRITICAL PRICING RULES (STAY IN YOUR LANE):
+1. NO SERVICE BLOAT: If the project is "Music Production", do NOT include "Marketing" or "Social Media" in the tiers. Stay focused on the core deliverable.
+2. COMPETITIVE ANCHORING: The "Standard" tier must be the market rate for a professional, complete result. Do not inflate it.
+3. TIER STRUCTURE (SCOPE BASED, NOT SERVICE BUNDLING):
+   - STARTER: "The Minimum Viable Result". (e.g., Basic Audio Clean, Rough Draft, Template-based). Low effort, low price.
+   - STANDARD: "The Professional Standard". (e.g., Broadcast Ready, Full Production, Custom Design). This is what 80% of clients want.
+   - ADVANCED: "The Power User Pack". (e.g., Includes Source Files, Stems, Commercial Rights, Extra Revisions). SAME service, but with more ASSETS/RIGHTS.
+
+FREELANCER CONTEXT:
 - Archetype: ${analysisData.archetype}
 - Proficiency: ${analysisData.proficiency}%
 - Core Skills: ${analysisData.skills.join(", ")}
-- Target Client: ${analysisData.clientGap}
-- Strategic Position: ${analysisData.suggestedPivot}
 
 ${marketSection}EFFORT ANALYSIS REQUIREMENT:
-For each tier, you MUST estimate the actual "Labor Hours" required to fulfill the deliverables. This is critical for the freelancer to assess profitability and avoid burnout. Consider:
-- Time for initial client communication and requirements gathering
-- Actual production/development/creation time
-- Revision rounds typically needed at each tier level
-- Final delivery and handoff time
+For each tier, estimate the actual "Labor Hours" required. This is critical for the freelancer to assess profitability.
 
-Generate a comprehensive 3-tier pricing structure in this JSON format:
+Generate 3 tiers in this JSON format:
 {
   "tiers": {
     "starter": {
       "name": "Starter",
-      "title": "Short tier title (max 30 chars) - what client gets",
-      "titleRationale": "Why this title works for the entry-level offering",
-      "description": "2-3 sentence description of what's included (max 80 chars)",
-      "descriptionRationale": "Why this description appeals to budget-conscious clients",
-      "deliveryDays": 3,
-      "deliveryRationale": "Why this timeframe is optimal for this tier",
-      "price": 150,
-      "priceRationale": "Why this price point works based on market data and proficiency level",
-      "features": ["Feature 1", "Feature 2"],
-      "featuresRationale": "Why these features are included at the starter level",
-      "estimatedHours": 2,
-      "estimatedHoursRationale": "Breakdown: 0.5hr client call, 1hr production, 0.5hr revisions and delivery"
+      "title": "Clear scope title (e.g., 'Basic Clean') - max 30 chars",
+      "titleRationale": "Why this title works for the minimum viable result",
+      "description": "Strictly limited scope description - max 80 chars",
+      "descriptionRationale": "Why this appeals to budget-conscious clients needing basic result",
+      "deliveryDays": 2,
+      "deliveryRationale": "Fast turnaround for basic scope",
+      "price": 75,
+      "priceRationale": "Competitive entry price based on market data",
+      "features": ["Core Deliverable Only", "Standard Resolution/Quality"],
+      "featuresRationale": "Minimal features for minimum viable result",
+      "estimatedHours": 1.5,
+      "estimatedHoursRationale": "Breakdown: 0.5hr client brief, 0.75hr production, 0.25hr delivery"
     },
     "standard": {
       "name": "Standard",
-      "title": "Short tier title (max 30 chars) - best value proposition",
-      "titleRationale": "Why this title works for the recommended tier",
-      "description": "2-3 sentence description of enhanced value (max 80 chars)",
-      "descriptionRationale": "Why this is positioned as the recommended option",
+      "title": "Core offer title (e.g., 'Broadcast Ready') - max 30 chars",
+      "titleRationale": "Why this title represents the professional standard",
+      "description": "Full professional deliverable - max 80 chars",
+      "descriptionRationale": "Why this is the recommended option for 80% of clients",
       "deliveryDays": 5,
-      "deliveryRationale": "Why this timeframe balances speed and quality",
-      "price": 350,
-      "priceRationale": "Why this price represents best value based on market positioning",
-      "features": ["Feature 1", "Feature 2", "Feature 3"],
-      "featuresRationale": "Why these features make this tier the sweet spot",
-      "estimatedHours": 5,
-      "estimatedHoursRationale": "Breakdown: 1hr discovery, 3hr production, 1hr revisions and delivery"
+      "deliveryRationale": "Standard professional turnaround",
+      "price": 200,
+      "priceRationale": "Market average for professional-grade result",
+      "features": ["High Resolution/Quality", "Commercial Use License", "1 Revision Round"],
+      "featuresRationale": "Complete professional package features",
+      "estimatedHours": 4,
+      "estimatedHoursRationale": "Breakdown: 0.5hr discovery, 2.5hr production, 1hr revisions and delivery"
     },
     "advanced": {
       "name": "Advanced",
-      "title": "Short tier title (max 30 chars) - premium offering",
-      "titleRationale": "Why this title justifies premium pricing",
-      "description": "2-3 sentence description of comprehensive service (max 80 chars)",
-      "descriptionRationale": "Why this description attracts premium clients",
+      "title": "Premium title (e.g., 'Full Source Access') - max 30 chars",
+      "titleRationale": "Why this title justifies premium for assets/rights",
+      "description": "For clients who need control/ownership - max 80 chars",
+      "descriptionRationale": "Why premium clients pay more for assets and rights",
       "deliveryDays": 7,
-      "deliveryRationale": "Why premium clients accept longer timelines for comprehensive work",
-      "price": 750,
-      "priceRationale": "Why this premium price is justified based on value and market rates",
-      "features": ["Feature 1", "Feature 2", "Feature 3", "Feature 4"],
-      "featuresRationale": "Why these premium features command higher pricing",
-      "estimatedHours": 10,
-      "estimatedHoursRationale": "Breakdown: 1.5hr strategy/discovery, 6hr production, 2.5hr revisions, handoff, and support"
+      "deliveryRationale": "Buffer time for comprehensive handoff",
+      "price": 400,
+      "priceRationale": "Premium justified by included assets, not extra services",
+      "features": ["Source Files/Stems Included", "Unlimited Revisions", "Priority Support", "Extended License"],
+      "featuresRationale": "Premium features = more ASSETS and RIGHTS, not more services",
+      "estimatedHours": 6,
+      "estimatedHoursRationale": "Breakdown: 1hr discovery, 3hr production, 2hr revisions/support buffer"
     }
   },
   "serviceOptions": [
     {
       "name": "Source Files",
       "starterIncluded": false,
-      "standardIncluded": true,
+      "standardIncluded": false,
       "advancedIncluded": true,
-      "rationale": "Why this service option is distributed this way across tiers"
+      "rationale": "High-value asset reserved for premium tier"
     }
   ],
   "addOns": [
     {
       "name": "Express Delivery",
       "price": 50,
-      "rationale": "High-margin: Requires minimal extra effort (under 30 mins) but offers significant client value"
+      "rationale": "High-margin: Minimal extra effort but high client value"
+    },
+    {
+      "name": "Source File Release",
+      "price": 100,
+      "rationale": "High-margin: No extra work, just license/asset transfer"
     }
   ],
-  "pricingStrategy": "A 2-3 sentence explanation of the overall pricing strategy and how the tiers are designed to maximize conversions",
-  "marketContext": "A 2-3 sentence summary of current market conditions and how this pricing compares to competitors"
+  "pricingStrategy": "Scope-based tiers: Starter = minimum viable, Standard = professional complete, Advanced = same service + assets/rights",
+  "marketContext": "Summary of how this pricing compares to current market rates from research"
 }
 
-IMPORTANT PRICING GUIDELINES:
-- Price based on proficiency level: ${analysisData.proficiency}% suggests ${analysisData.proficiency >= 80 ? 'premium' : analysisData.proficiency >= 60 ? 'mid-range' : 'competitive'} positioning
-- Standard tier should be 2-2.5x the Starter price (anchoring effect)
-- Advanced tier should be 2-2.5x the Standard price
-- Delivery times should scale appropriately with complexity
-- Each tier title must be under 30 characters
-- Each tier description must be under 80 characters
-- Service options should create clear differentiation between tiers
-- Include 3-5 service options and 2-4 add-ons
-
-EFFORT ANALYSIS GUIDELINES:
-- estimatedHours must be realistic based on the deliverables - be honest, not optimistic
-- Include ALL time: communication, production, revisions, delivery
-- estimatedHoursRationale must show the breakdown (e.g., "1hr discovery + 3hr production + 1hr revisions")
-
-HIGH-MARGIN ADD-ONS REQUIREMENT:
-- Add-ons should be "High-Margin": items that offer high client value but require minimal fulfillment time (under 30 minutes of additional work)
-- Examples: Priority support queue, expedited delivery, additional file formats, extended license
-- Avoid low-margin add-ons that significantly increase work time
+ANTI-BLOAT CHECKLIST:
+- Are ALL three tiers delivering the SAME core service? (Yes = good)
+- Is the only difference SCOPE, QUALITY, and ASSETS? (Yes = good)
+- Did you add unrelated services like "marketing" or "consulting" to justify higher tiers? (If yes = REWRITE)
 
 Return ONLY valid JSON, no additional text.`;
 
