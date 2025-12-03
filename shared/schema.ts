@@ -183,3 +183,16 @@ export interface ProcessSuggestion {
   processStrategy: string;
   clientCommunicationTip: string;
 }
+
+export interface FAQ {
+  question: string;
+  answer: string;
+  rationale: string;
+}
+
+export interface DescriptionSuggestion {
+  projectSummary: string;
+  projectSummaryRationale: string;
+  faqs: FAQ[];
+  descriptionStrategy: string;
+}

@@ -10,6 +10,7 @@ import ProjectCreation from "@/pages/project-creation";
 import Pricing from "@/pages/pricing";
 import Gallery from "@/pages/gallery";
 import Process from "@/pages/process";
+import Description from "@/pages/description";
 
 function Router() {
   return (
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/pricing" component={Pricing} />
       <Route path="/gallery" component={Gallery} />
       <Route path="/process" component={Process} />
+      <Route path="/description" component={Description} />
       <Route component={NotFound} />
     </Switch>
   );

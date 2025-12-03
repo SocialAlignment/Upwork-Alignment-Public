@@ -131,3 +131,27 @@ export async function getProcessSuggestions(
 
   return response.json();
 }
+
+export async function getDescriptionSuggestions(
+  analysisData: any, 
+  projectIdea: string, 
+  projectTitle: string,
+  projectCategory: string,
+  pricingData?: any,
+  processData?: any
+) {
+  const response = await fetch("/api/description-suggestions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ analysisData, projectIdea, projectTitle, projectCategory, pricingData, processData }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to get description suggestions");
+  }
+
+  return response.json();
+}

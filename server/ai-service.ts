@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { InsertAnalysisResult, AnalysisResult, ProjectSuggestion, PricingSuggestion, GallerySuggestion, ProcessSuggestion } from "@shared/schema";
+import type { InsertAnalysisResult, AnalysisResult, ProjectSuggestion, PricingSuggestion, GallerySuggestion, ProcessSuggestion, DescriptionSuggestion } from "@shared/schema";
 import { level1Categories, getLevel2Categories, getLevel3Categories, hasLevel3 } from "@shared/upwork-categories";
 
 const anthropic = new Anthropic();
@@ -908,5 +908,139 @@ Return ONLY valid JSON, no additional text.`;
     steps: parsed.steps || [],
     processStrategy: parsed.processStrategy || "",
     clientCommunicationTip: parsed.clientCommunicationTip || "",
+  };
+}
+
+export async function generateDescriptionSuggestions(
+  analysisData: AnalysisResult,
+  projectIdea: string,
+  projectTitle: string,
+  projectCategory: string,
+  pricingData?: {
+    use3Tiers: boolean;
+    tiers: {
+      starter: { title: string; description: string; deliveryDays: number; price: number } | null;
+      standard: { title: string; description: string; deliveryDays: number; price: number };
+      advanced: { title: string; description: string; deliveryDays: number; price: number } | null;
+    };
+    serviceOptions?: { name: string; starterIncluded: boolean; standardIncluded: boolean; advancedIncluded: boolean }[];
+    addOns?: { name: string; price: number }[];
+  },
+  processData?: {
+    requirements: { text: string; isRequired: boolean }[];
+    steps: { title: string; description: string }[];
+  }
+): Promise<DescriptionSuggestion> {
+  const pricingSection = pricingData ? `
+PRICING TIERS:
+${pricingData.tiers.starter ? `- Starter: "${pricingData.tiers.starter.title}" - $${pricingData.tiers.starter.price}` : ""}
+- Standard: "${pricingData.tiers.standard.title}" - $${pricingData.tiers.standard.price}
+${pricingData.tiers.advanced ? `- Advanced: "${pricingData.tiers.advanced.title}" - $${pricingData.tiers.advanced.price}` : ""}
+` : "";
+
+  const processSection = processData ? `
+PROJECT PROCESS:
+Requirements: ${processData.requirements.map(r => r.text).join("; ")}
+Steps: ${processData.steps.map(s => s.title).join(" → ")}
+` : "";
+
+  const projectsSection = analysisData.projects && analysisData.projects.length > 0 
+    ? `PAST PROJECTS (Reference for credibility):
+${analysisData.projects.map((p: { name: string; type: string }) => `- ${p.name} (${p.type})`).join("\n")}`
+    : "";
+
+  const prompt = `You are an expert Upwork project consultant. Generate a compelling project summary and FAQs for a freelancer's project listing.
+
+PROJECT DETAILS:
+- Title: ${projectTitle}
+- Category: ${projectCategory}
+- Description: ${projectIdea}
+${pricingSection}${processSection}
+FREELANCER PROFILE:
+- Archetype: ${analysisData.archetype}
+- Core Skills: ${analysisData.skills.join(", ")}
+- Proficiency Level: ${analysisData.proficiency}%
+- Target Client: ${analysisData.clientGap}
+- Strategic Position: ${analysisData.suggestedPivot}
+- Signature Method: ${analysisData.signatureMechanism || "Not defined"}
+${projectsSection}
+
+UPWORK PROJECT SUMMARY BEST PRACTICES:
+- Must be 120-1200 characters
+- Open with what makes YOU and your project unique (not generic "I will...")
+- Reference your specific experience level and approach
+- Include your signature methodology if it fits naturally
+- Address your target client's pain points directly
+- End with what the client gets and why they should work with you
+- Write in first person, professional but approachable tone
+- Avoid buzzwords like "revolutionary," "game-changing," "cutting-edge"
+
+FAQ BEST PRACTICES:
+- Answer common client concerns BEFORE they ask
+- Focus on questions that prevent back-and-forth messages
+- Include: timeline expectations, revision process, communication style
+- Questions should feel natural, not corporate
+- Answers should be concise but thorough (50-200 characters)
+- Generate 3-5 FAQs that save the back and forth
+
+Generate in this JSON format:
+{
+  "projectSummary": "Compelling 120-1200 character project summary that sells the freelancer's unique value",
+  "projectSummaryRationale": "Why this summary works for this specific archetype and target client",
+  "faqs": [
+    {
+      "question": "Natural question clients commonly ask about this type of project",
+      "answer": "Concise, helpful answer (50-200 chars)",
+      "rationale": "Why this FAQ addresses a key concern for ${analysisData.clientGap}"
+    }
+  ],
+  "descriptionStrategy": "2-3 sentence explanation of how this description positions the freelancer effectively"
+}
+
+IMPORTANT GUIDELINES:
+- Project summary must reflect the ${analysisData.archetype} archetype
+- FAQs should anticipate concerns of ${analysisData.clientGap}
+- Reference actual skills: ${analysisData.skills.slice(0, 3).join(", ")}
+- If signature mechanism exists, weave it into the summary naturally
+- Keep language confident but not arrogant
+- Focus on outcomes and client benefits, not just features
+
+Return ONLY valid JSON, no additional text.`;
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2000,
+    temperature: 0,
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+  });
+
+  const content = message.content[0];
+  if (content.type !== "text") {
+    throw new Error("Unexpected response type from AI");
+  }
+
+  const result = content.text;
+  const jsonMatch = result.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("No valid JSON found in AI response");
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (parseError) {
+    throw new Error("AI response contained invalid JSON format");
+  }
+
+  return {
+    projectSummary: parsed.projectSummary || "",
+    projectSummaryRationale: parsed.projectSummaryRationale || "",
+    faqs: parsed.faqs || [],
+    descriptionStrategy: parsed.descriptionStrategy || "",
   };
 }

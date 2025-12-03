@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
-import { analyzeProfile, generateProjectSuggestions, generatePricingSuggestions, generateGallerySuggestions, generateProcessSuggestions } from "./ai-service";
+import { analyzeProfile, generateProjectSuggestions, generatePricingSuggestions, generateGallerySuggestions, generateProcessSuggestions, generateDescriptionSuggestions } from "./ai-service";
 import { UPWORK_CATEGORIES, PROJECT_ATTRIBUTES, TITLE_BEST_PRACTICES } from "./upwork-knowledge";
 
 async function parsePdf(buffer: Buffer): Promise<string> {
@@ -265,6 +265,46 @@ export async function registerRoutes(
       
       res.status(500).json({ 
         error: "Failed to generate process suggestions. Please try again." 
+      });
+    }
+  });
+
+  app.post("/api/description-suggestions", async (req, res) => {
+    try {
+      const { analysisData, projectIdea, projectTitle, projectCategory, pricingData, processData } = req.body;
+      
+      if (!analysisData || !analysisData.archetype) {
+        return res.status(400).json({ error: "Analysis data is required" });
+      }
+
+      if (!projectIdea || projectIdea.trim().length < 10) {
+        return res.status(400).json({ error: "Project idea is required" });
+      }
+
+      if (!projectTitle) {
+        return res.status(400).json({ error: "Project title is required" });
+      }
+
+      const suggestions = await generateDescriptionSuggestions(
+        analysisData, 
+        projectIdea, 
+        projectTitle,
+        projectCategory || "General",
+        pricingData,
+        processData
+      );
+      res.json(suggestions);
+    } catch (error: any) {
+      console.error("Error generating description suggestions:", error);
+      
+      if (error.message?.includes("JSON")) {
+        return res.status(500).json({ 
+          error: "AI returned an unexpected format. Please try again." 
+        });
+      }
+      
+      res.status(500).json({ 
+        error: "Failed to generate description suggestions. Please try again." 
       });
     }
   });

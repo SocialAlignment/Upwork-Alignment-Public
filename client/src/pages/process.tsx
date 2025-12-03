@@ -290,14 +290,18 @@ export default function Process() {
       requirements: validRequirements.map(r => ({
         text: r.text,
         isRequired: r.isRequired,
+        rationale: r.rationale,
       })),
       steps: validSteps.map(s => ({
         title: s.title,
         description: s.description,
+        estimatedDuration: s.estimatedDuration,
+        rationale: s.rationale,
       })),
     };
 
     sessionStorage.setItem("processData", JSON.stringify(processData));
+    sessionStorage.setItem("processSelections", JSON.stringify(processData));
     navigate("/description");
   };
 
