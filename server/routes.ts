@@ -7,8 +7,9 @@ import { UPWORK_CATEGORIES, PROJECT_ATTRIBUTES, TITLE_BEST_PRACTICES } from "./u
 
 async function parsePdf(buffer: Buffer): Promise<string> {
   const { PDFParse } = await import("pdf-parse");
-  const data = await PDFParse(buffer);
-  return data.text;
+  const parser = new PDFParse({ data: buffer });
+  const result = await parser.getText();
+  return result.text;
 }
 
 const upload = multer({ storage: multer.memoryStorage() });
