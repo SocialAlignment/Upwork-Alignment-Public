@@ -481,6 +481,11 @@ ADD-ONS AVAILABLE:
 ${pricingData.addOns.map(addon => `- ${addon.name}: +$${addon.price}`).join("\n")}` : ""}
 ` : "";
 
+  const projectsSection = analysisData.projects && analysisData.projects.length > 0 
+    ? `PAST PROJECT EXPERIENCE (Use these to inform document suggestions):
+${analysisData.projects.map((p: { name: string; type: string }) => `- ${p.name} (${p.type})`).join("\n")}`
+    : "";
+
   const prompt = `You are an expert Upwork project marketing strategist. Generate compelling gallery content for a freelancer's project listing.
 
 PROJECT DETAILS:
@@ -491,7 +496,12 @@ ${pricingSection}
 FREELANCER PROFILE:
 - Archetype: ${analysisData.archetype}
 - Core Skills: ${analysisData.skills.join(", ")}
+- Proficiency Level: ${analysisData.proficiency}%
 - Target Client: ${analysisData.clientGap}
+- Strategic Position: ${analysisData.suggestedPivot}
+- Missing Skill to Highlight: ${analysisData.missingSkill} - ${analysisData.missingSkillDesc}
+- Recommended Keywords: ${analysisData.recommendedKeywords.join(", ")}
+${projectsSection}
 
 UPWORK COVER IMAGE BEST PRACTICES (Apply these to thumbnail prompt):
 - Image size: 1000x750px (4:3 aspect ratio) for Upwork Project Catalog
@@ -538,16 +548,18 @@ Generate comprehensive gallery content in this JSON format:
   },
   "sampleDocuments": [
     {
-      "title": "Document 1 Title (e.g., 'Project Requirements Template')",
-      "description": "What this document demonstrates to potential clients",
-      "contentOutline": ["Section 1", "Section 2", "Section 3"],
-      "purpose": "Why this document helps showcase your expertise"
+      "title": "SPECIFIC document title based on freelancer's skills and project type (NOT generic)",
+      "description": "How this document relates to their actual expertise: ${analysisData.skills.slice(0,3).join(', ')}",
+      "contentOutline": ["Section based on their archetype", "Section using their core skills", "Section targeting their ideal client"],
+      "purpose": "Why this document helps showcase expertise specifically for a ${analysisData.archetype}",
+      "dataEvidence": "Which skill or project from the profile this document is based on"
     },
     {
-      "title": "Document 2 Title",
-      "description": "Description of document 2",
-      "contentOutline": ["Section 1", "Section 2"],
-      "purpose": "Why this document is valuable"
+      "title": "Second document title tailored to their strategic position",
+      "description": "How this addresses their target client: ${analysisData.clientGap}",
+      "contentOutline": ["Relevant section 1", "Relevant section 2"],
+      "purpose": "Why this is valuable for their specific positioning",
+      "dataEvidence": "Which skill or project from the profile this document is based on"
     }
   ],
   "galleryStrategy": "A 2-3 sentence explanation of why this gallery content will attract ideal clients and how it showcases the freelancer's unique value"
@@ -558,9 +570,17 @@ IMPORTANT GUIDELINES:
 - Video script should be conversational and under 90 seconds total
 - CRITICAL: If pricing tiers are provided above, the video script MUST mention the EXACT prices (e.g., "Starting at $${pricingData?.tiers?.starter?.price || pricingData?.tiers?.standard?.price || 'X'}"). Do NOT invent different prices.
 - The video script should reference the actual tier names and prices the user selected
-- Suggest 2-3 sample documents that demonstrate expertise
 - Focus on client outcomes and benefits, not just features
 - Make content professional yet approachable
+
+CRITICAL SAMPLE DOCUMENT REQUIREMENTS (Evidence-Based Only):
+- Each document suggestion MUST be derived from the freelancer's actual skills, projects, or archetype
+- Do NOT suggest generic templates like "Project Requirements Template" - make them specific to THIS freelancer
+- The "dataEvidence" field MUST reference which specific skill or past project from the profile justifies this document
+- Document titles should reflect their archetype (${analysisData.archetype}) and target client (${analysisData.clientGap})
+- Content outlines should incorporate their actual core skills: ${analysisData.skills.slice(0, 4).join(", ")}
+- If they have past projects, base at least one document on demonstrating similar deliverables
+- Suggest 2-3 sample documents that prove competence to their target clients
 
 Return ONLY valid JSON, no additional text.`;
 

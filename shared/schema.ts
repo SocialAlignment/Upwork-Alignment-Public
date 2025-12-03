@@ -151,6 +151,7 @@ export interface SampleDocument {
   description: string;
   contentOutline: string[];
   purpose: string;
+  dataEvidence?: string;
 }
 
 export interface GallerySuggestion {

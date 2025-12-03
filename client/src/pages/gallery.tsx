@@ -629,10 +629,15 @@ export default function Gallery() {
                               </ul>
                             </div>
 
-                            <div className="pt-2 border-t">
+                            <div className="pt-2 border-t space-y-1">
                               <p className="text-xs text-muted-foreground">
                                 <span className="font-medium">Purpose:</span> {doc.purpose}
                               </p>
+                              {doc.dataEvidence && (
+                                <p className="text-xs text-blue-600 dark:text-blue-400">
+                                  <span className="font-medium">Based on:</span> {doc.dataEvidence}
+                                </p>
+                              )}
                             </div>
                           </div>
                         )) || (
