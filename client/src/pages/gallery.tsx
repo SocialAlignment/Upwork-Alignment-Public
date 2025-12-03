@@ -71,6 +71,7 @@ interface PricingSelections {
   };
   serviceOptions: { name: string; starterIncluded: boolean; standardIncluded: boolean; advancedIncluded: boolean }[];
   addOns: { name: string; price: number }[];
+  visualStyle?: string;
 }
 
 export default function Gallery() {
@@ -118,6 +119,10 @@ export default function Gallery() {
       setProjectCategory(storedCategory || "General");
       setPricingData(parsedPricing);
       
+      if (parsedPricing?.visualStyle && parsedPricing.visualStyle in VISUAL_STYLES) {
+        setVisualStyle(parsedPricing.visualStyle as VisualStyleKey);
+      }
+      
       if (cachedGallery) {
         try {
           const cached = JSON.parse(cachedGallery);
@@ -128,7 +133,11 @@ export default function Gallery() {
         }
       }
       
-      fetchSuggestions(parsedAnalysis, storedIdea, storedTitle || "Your Project", storedCategory || "General", parsedPricing);
+      const defaultStyle = "photorealistic";
+      const pricingWithStyle = parsedPricing 
+        ? { ...parsedPricing, visualStyle: parsedPricing.visualStyle || defaultStyle } 
+        : { visualStyle: defaultStyle } as any;
+      fetchSuggestions(parsedAnalysis, storedIdea, storedTitle || "Your Project", storedCategory || "General", pricingWithStyle);
     } catch (e) {
       setError("Failed to load data. Please go back and try again.");
       setIsLoading(false);
@@ -159,7 +168,8 @@ export default function Gallery() {
   const handleRegenerate = () => {
     if (analysisData && projectIdea) {
       sessionStorage.removeItem("gallerySuggestions");
-      fetchSuggestions(analysisData, projectIdea, projectTitle, projectCategory, pricingData);
+      const pricingWithStyle = pricingData ? { ...pricingData, visualStyle } : { visualStyle } as any;
+      fetchSuggestions(analysisData, projectIdea, projectTitle, projectCategory, pricingWithStyle);
     }
   };
 

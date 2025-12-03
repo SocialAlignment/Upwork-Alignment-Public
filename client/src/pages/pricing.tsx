@@ -483,6 +483,7 @@ export default function Pricing() {
                       },
                       serviceOptions: [],
                       addOns: [],
+                      visualStyle: "photorealistic",
                       visualAnalysis: analysis,
                     };
                     sessionStorage.setItem("pricingSelections", JSON.stringify(backwardCompatiblePricing));

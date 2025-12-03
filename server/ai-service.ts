@@ -703,8 +703,31 @@ export async function generateGallerySuggestions(
     };
     serviceOptions?: { name: string; starterIncluded: boolean; standardIncluded: boolean; advancedIncluded: boolean }[];
     addOns?: { name: string; price: number }[];
+    visualStyle?: string;
   }
 ): Promise<GallerySuggestion> {
+  const categoryLower = projectCategory.toLowerCase();
+  
+  let detectedVisualType = "general";
+  let visualGuidance = "Show a professional representation of the deliverable";
+  
+  if (/video|animation|motion|film|trailer/.test(categoryLower)) {
+    detectedVisualType = "video";
+    visualGuidance = "Show a cinematic frame, video editing timeline with 'Play' button overlay, or a dramatic scene from the content. Focus on motion and storytelling.";
+  } else if (/audio|music|voice|podcast|sound/.test(categoryLower)) {
+    detectedVisualType = "audio";
+    visualGuidance = "Show a waveform visualization, studio microphone, mixing console, or professional audio equipment. Emphasize sound and production quality.";
+  } else if (/design|creative|illustration|art|logo|brand|book cover|graphic/.test(categoryLower)) {
+    detectedVisualType = "design";
+    visualGuidance = "Show the actual artwork, creative asset, or finished design piece. Display the visual deliverable itself, not tools or process.";
+  } else if (/web|mobile|app|development|software|data|analytics|programming|code/.test(categoryLower)) {
+    detectedVisualType = "dev";
+    visualGuidance = "Show code snippets, app screens, dashboards, or device mockups. Focus on the technical deliverable.";
+  } else if (/writing|content|copy|blog|article|transcript/.test(categoryLower)) {
+    detectedVisualType = "writing";
+    visualGuidance = "Show a stylized document, elegant text layout, or typewriter aesthetic. Focus on words and composition.";
+  }
+
   const pricingSection = pricingData ? `
 PRICING TIERS (User has set these exact prices - you MUST reference these specific prices in video script and content):
 ${pricingData.tiers.starter ? `- Starter: "${pricingData.tiers.starter.title}" - $${pricingData.tiers.starter.price} (${pricingData.tiers.starter.deliveryDays} days) - ${pricingData.tiers.starter.description}` : ""}
@@ -738,15 +761,14 @@ FREELANCER PROFILE:
 ${projectsSection}
 
 UPWORK COVER IMAGE BEST PRACTICES (Apply these to thumbnail prompt):
-- Image size: 1000x750px (4:3 aspect ratio) for Upwork Project Catalog
-- Show OUTCOMES and RESULTS, not just process (before/after comparisons, metrics, data visualizations)
-- 3-second clarity rule: clients should understand the offer instantly while browsing
-- Simple compositions beat cluttered collages
-- High contrast and professional color schemes
-- Include industry-specific signals (relevant tech logos, tool interfaces, device mockups)
-- For design/dev: show Figma screens, code snippets, device mockups with actual deliverables
-- For marketing: show GA4 dashboards, engagement graphs, ROI charts
-- Avoid: generic stock photos, text-heavy designs, pixelated images, multiple unrelated services
+- Image size: 1000x750px (4:3 aspect ratio).
+- **DETECTED VISUAL TYPE: "${detectedVisualType.toUpperCase()}"**
+- **MANDATORY VISUAL GUIDANCE:** ${visualGuidance}
+- **Outcome-First Rule:** Show the *result* for "${projectTitle}" - the exciting finished product, not just the process or tools.
+- **Style:** Use '${pricingData?.visualStyle || "Professional"}' aesthetic.
+- **Lighting:** Always specify "Cinematic lighting" and "High contrast".
+- **Background:** Clean, solid, or gradient. NO blurry/bokeh backgrounds.
+- **DO NOT** default to dashboards, documents, or app screens unless the detected visual type is "dev".
 
 VIDEO SCRIPT TONE OF VOICE REQUIREMENTS (CRITICAL - Apply these to all script sections):
 
@@ -803,7 +825,7 @@ Energy Progression for Video:
 Generate comprehensive gallery content in this JSON format:
 {
   "thumbnailPrompt": {
-    "prompt": "A detailed prompt for high-quality Imagen 3 / Nano Banana image generation. MUST follow the Outcome-First composition rule: Foreground should feature a tangible deliverable (dashboard mockup, report page, app screen, polished document) with 'floating UI elements' to show depth and professionalism. Use cinematic lighting and 8k resolution. Background MUST be clean, solid, or gradient (NEVER blurry or bokeh backgrounds - these underperform on Upwork's white interface). Include specific industry-relevant visual elements that signal expertise. The prompt should be 3-4 sentences ready for copy/paste into Gemini.",
+    "prompt": "A detailed prompt for Imagen 3. Describe a foreground element that is SPECIFIC to '${projectCategory}'. For '${projectTitle}', do NOT default to dashboards or documents unless the category is Dev/Data. For Video projects, show a cinematic frame or editing timeline. For Audio, show waveforms or studio equipment. For Design, show the actual creative asset. Use cinematic lighting, high contrast, 8k resolution. Background MUST be clean, solid, or gradient (NEVER blurry or bokeh). The prompt should be 3-4 sentences ready for copy/paste.",
     "styleNotes": "Style direction matching one of: 'Photorealistic Studio', '3D Isometric Tech', 'Abstract Data Flow', or 'Minimalist Brand' - choose based on the project category and target client",
     "colorPalette": ["#hexcolor1", "#hexcolor2", "#hexcolor3"],
     "compositionTips": "Specific layout guidance: primary deliverable in left two-thirds, floating accent elements in right third, clean background with subtle gradient. Ensure 3-second clarity - viewer should instantly understand what the freelancer delivers.",
