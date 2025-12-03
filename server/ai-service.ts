@@ -71,7 +71,25 @@ Return ONLY valid JSON, no additional text.`;
     throw new Error("No valid JSON found in AI response");
   }
 
-  const parsed = JSON.parse(jsonMatch[0]);
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (parseError) {
+    throw new Error("AI response contained invalid JSON format");
+  }
+
+  const requiredFields = [
+    'archetype', 'proficiency', 'skills', 'projects', 'gapTitle', 
+    'gapDescription', 'suggestedPivot', 'missingSkillCluster', 
+    'missingSkill', 'missingSkillDesc', 'clientGapType', 
+    'clientGap', 'clientGapDesc', 'recommendedKeywords'
+  ];
+  
+  for (const field of requiredFields) {
+    if (parsed[field] === undefined) {
+      throw new Error(`AI response missing required field: ${field}`);
+    }
+  }
   
   return {
     archetype: parsed.archetype,

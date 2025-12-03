@@ -26,16 +26,51 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Upwork and LinkedIn URLs are required" });
       }
 
-      const pdfData = await (pdfParse as any).default(file.buffer);
-      const resumeText = pdfData.text;
+      let resumeText: string;
+      try {
+        const pdfData = await (pdfParse as any).default(file.buffer);
+        resumeText = pdfData.text;
+        
+        if (!resumeText || resumeText.trim().length < 50) {
+          return res.status(400).json({ 
+            error: "Could not extract enough text from the PDF. Please ensure your resume is a text-based PDF, not a scanned image." 
+          });
+        }
+      } catch (pdfError) {
+        console.error("PDF parsing error:", pdfError);
+        return res.status(400).json({ 
+          error: "Failed to parse PDF file. Please ensure it's a valid PDF document." 
+        });
+      }
+
+      let analysisData;
+      try {
+        analysisData = await analyzeProfile({
+          resumeText,
+          upworkUrl,
+          linkedinUrl,
+        });
+      } catch (aiError: any) {
+        console.error("AI analysis error:", aiError);
+        
+        if (aiError.message?.includes("JSON")) {
+          return res.status(500).json({ 
+            error: "AI analysis returned an unexpected format. Please try again." 
+          });
+        }
+        
+        if (aiError.status === 401 || aiError.message?.includes("API key")) {
+          return res.status(500).json({ 
+            error: "AI service authentication failed. Please contact support." 
+          });
+        }
+        
+        return res.status(500).json({ 
+          error: "AI analysis failed. Please try again in a moment." 
+        });
+      }
 
       const profile = await storage.createUserProfile({
-        resumeText,
-        upworkUrl,
-        linkedinUrl,
-      });
-
-      const analysisData = await analyzeProfile({
         resumeText,
         upworkUrl,
         linkedinUrl,
@@ -52,7 +87,7 @@ export async function registerRoutes(
       });
     } catch (error) {
       console.error("Error processing profile:", error);
-      res.status(500).json({ error: "Failed to process profile" });
+      res.status(500).json({ error: "An unexpected error occurred. Please try again." });
     }
   });
 
