@@ -1,0 +1,38 @@
+I need to overhaul the Pricing page to be "Visual-First" because Upwork fields change by category. Please make these 4 major updates:
+
+1. UPDATE `client/src/components/file-upload.tsx`:
+   - Update the component to accept an `accept` prop (string) so I can use it for Images (image/*) or PDFs.
+   - Update the `label` prop to be dynamic (default to "Upload File").
+
+2. UPDATE `client/src/pages/pricing.tsx`:
+   - Remove the hardcoded manual entry fields for tiers.
+   - Add the `<FileUpload>` component configured for images (`accept="image/*"`).
+   - Add a "Analyze Pricing Page" button.
+   - Add a display section for "AI Recommendations":
+     - This should render a list of **"Field Mapping"**: e.g., "Field Name -> Suggested Value".
+     - Display the "Strategic Rationale" for *why* we are pricing it this way.
+
+3. UPDATE `server/routes.ts`:
+   - Modify `POST /api/pricing-suggestions` to handle `multipart/form-data` (file upload) using Multer.
+   - Pass the uploaded image buffer to the AI service.
+
+4. UPDATE `server/ai-service.ts`:
+   - Update `generatePricingSuggestions` to accept an `imageBuffer`.
+   - Change the Anthropic API call to use the **Vision capabilities** (sending the image in the message).
+   - Update the System Prompt:
+     "You are an expert Upwork Pricing Strategist. Analyze the attached screenshot of an Upwork pricing page.
+     1. Identify every input field, checkbox, and dropdown visible.
+     2. Based on the user's project idea ('[projectIdea]') and the 'Target Hourly Rate' ($100/hr), tell the user EXACTLY what to fill in for each field.
+     3. If you see 'Add-ons' or 'Extra Services' in the screenshot, suggest which ones to check/fill.
+     4. Calculate if the prices you suggest meet the user's profitability goal."
+
+   - Return a JSON structure:
+     ```json
+     {
+       "fields": [
+         { "label": "Name of field in screenshot", "value": "What to type/select", "rationale": "Why?" }
+       ],
+       "estimatedProfitability": "High/Medium/Low",
+       "strategyNote": "Advice on how to frame this price"
+     }
+     ```

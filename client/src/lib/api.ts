@@ -90,6 +90,35 @@ export async function getPricingSuggestions(
   return response.json();
 }
 
+export async function analyzePricingScreenshot(data: {
+  screenshot: File;
+  analysisData: any;
+  projectIdea: string;
+  projectTitle: string;
+  projectCategory: string;
+  targetHourlyRate: number;
+}) {
+  const formData = new FormData();
+  formData.append("screenshot", data.screenshot);
+  formData.append("analysisData", JSON.stringify(data.analysisData));
+  formData.append("projectIdea", data.projectIdea);
+  formData.append("projectTitle", data.projectTitle);
+  formData.append("projectCategory", data.projectCategory);
+  formData.append("targetHourlyRate", data.targetHourlyRate.toString());
+
+  const response = await fetch("/api/analyze-pricing-screenshot", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to analyze pricing screenshot");
+  }
+
+  return response.json();
+}
+
 export async function getGallerySuggestions(
   analysisData: any, 
   projectIdea: string, 

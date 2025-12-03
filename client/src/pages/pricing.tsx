@@ -1,22 +1,43 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, RefreshCw, DollarSign, Clock, Info, Check, Plus, X, Sparkles, TrendingUp, Lightbulb, AlertTriangle, CheckCircle, Timer } from "lucide-react";
+import { ArrowLeft, ArrowRight, RefreshCw, DollarSign, TrendingUp, Lightbulb, Image, Sparkles, CheckCircle, AlertTriangle, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { getPricingSuggestions } from "@/lib/api";
-import type { PricingSuggestion, PricingTier, ServiceOption, AddOn } from "@shared/schema";
+import { FileUpload } from "@/components/file-upload";
+import { analyzePricingScreenshot } from "@/lib/api";
 
-interface AnalysisResult {
+interface FieldRecommendation {
+  label: string;
+  value: string;
+  rationale: string;
+}
+
+interface ExtractedTier {
+  title: string;
+  price: number;
+  deliveryDays: number;
+  description: string;
+  estimatedHours: number;
+}
+
+interface PricingAnalysis {
+  fields: FieldRecommendation[];
+  estimatedProfitability: "High" | "Medium" | "Low";
+  strategyNote: string;
+  extractedPricing?: {
+    starter?: ExtractedTier;
+    standard?: ExtractedTier;
+    advanced?: ExtractedTier;
+  };
+}
+
+interface AnalysisData {
   archetype: string;
   proficiency: number;
   skills: string[];
@@ -24,391 +45,152 @@ interface AnalysisResult {
   gapTitle: string;
   gapDescription: string;
   suggestedPivot: string;
-  missingSkillCluster: string;
-  missingSkill: string;
-  missingSkillDesc: string;
-  clientGapType: string;
   clientGap: string;
-  clientGapDesc: string;
   recommendedKeywords: string[];
 }
 
 export default function Pricing() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(null);
+  const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [projectIdea, setProjectIdea] = useState("");
   const [projectTitle, setProjectTitle] = useState("");
   const [projectCategory, setProjectCategory] = useState("");
-  const [suggestions, setSuggestions] = useState<PricingSuggestion | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [use3Tiers, setUse3Tiers] = useState(true);
-  
-  const [starterTitle, setStarterTitle] = useState("");
-  const [starterDesc, setStarterDesc] = useState("");
-  const [starterDays, setStarterDays] = useState(1);
-  const [starterPrice, setStarterPrice] = useState(0);
-  
-  const [standardTitle, setStandardTitle] = useState("");
-  const [standardDesc, setStandardDesc] = useState("");
-  const [standardDays, setStandardDays] = useState(3);
-  const [standardPrice, setStandardPrice] = useState(0);
-  
-  const [advancedTitle, setAdvancedTitle] = useState("");
-  const [advancedDesc, setAdvancedDesc] = useState("");
-  const [advancedDays, setAdvancedDays] = useState(7);
-  const [advancedPrice, setAdvancedPrice] = useState(0);
-  
-  const [starterHours, setStarterHours] = useState(2);
-  const [standardHours, setStandardHours] = useState(5);
-  const [advancedHours, setAdvancedHours] = useState(10);
   const [targetHourlyRate, setTargetHourlyRate] = useState(100);
-  
-  const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
-  const [addOns, setAddOns] = useState<AddOn[]>([]);
-  const [customAddOn, setCustomAddOn] = useState("");
-  const [customAddOnPrice, setCustomAddOnPrice] = useState("");
-  
-  const [selectedRationale, setSelectedRationale] = useState<{
-    field: string;
-    tier?: string;
-    rationale: string;
-  } | null>(null);
+  const [screenshot, setScreenshot] = useState<File | null>(null);
+  const [analysis, setAnalysis] = useState<PricingAnalysis | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   useEffect(() => {
     const storedAnalysis = sessionStorage.getItem("analysisData");
     const storedIdea = sessionStorage.getItem("projectIdea");
     const storedTitle = sessionStorage.getItem("selectedProjectTitle");
     const storedCategory = sessionStorage.getItem("selectedProjectCategory");
-    const cachedPricing = sessionStorage.getItem("pricingSuggestions");
-    
+    const cachedPricingAnalysis = sessionStorage.getItem("pricingAnalysis");
+    const storedRate = sessionStorage.getItem("targetHourlyRate");
+
     if (!storedAnalysis || !storedIdea) {
       setError("Missing profile data or project idea. Please start from the beginning.");
-      setIsLoading(false);
       return;
     }
 
     try {
-      const parsedAnalysis = JSON.parse(storedAnalysis);
-      setAnalysisData(parsedAnalysis);
+      setAnalysisData(JSON.parse(storedAnalysis));
       setProjectIdea(storedIdea);
       setProjectTitle(storedTitle || "Your Project");
       setProjectCategory(storedCategory || "General");
       
-      if (cachedPricing) {
-        try {
-          const cached = JSON.parse(cachedPricing);
-          applySuggestions(cached);
-          setSuggestions(cached);
-          setIsLoading(false);
-          return;
-        } catch (e) {
-        }
+      if (storedRate) {
+        setTargetHourlyRate(parseFloat(storedRate) || 100);
       }
-      
-      fetchSuggestions(parsedAnalysis, storedIdea, storedTitle || "Your Project", storedCategory || "General");
+
+      if (cachedPricingAnalysis) {
+        setAnalysis(JSON.parse(cachedPricingAnalysis));
+      }
     } catch (e) {
       setError("Failed to load data. Please go back and try again.");
-      setIsLoading(false);
     }
   }, []);
 
-  const applySuggestions = (data: PricingSuggestion) => {
-    if (data.tiers?.starter) {
-      setStarterTitle(data.tiers.starter.title || "");
-      setStarterDesc(data.tiers.starter.description || "");
-      setStarterDays(data.tiers.starter.deliveryDays || 1);
-      setStarterPrice(data.tiers.starter.price || 0);
-      setStarterHours(data.tiers.starter.estimatedHours || 2);
+  const handleAnalyze = async () => {
+    if (!screenshot) {
+      toast({
+        title: "Screenshot Required",
+        description: "Please upload a screenshot of the Upwork pricing page first.",
+        variant: "destructive",
+      });
+      return;
     }
-    if (data.tiers?.standard) {
-      setStandardTitle(data.tiers.standard.title || "");
-      setStandardDesc(data.tiers.standard.description || "");
-      setStandardDays(data.tiers.standard.deliveryDays || 3);
-      setStandardPrice(data.tiers.standard.price || 0);
-      setStandardHours(data.tiers.standard.estimatedHours || 5);
-    }
-    if (data.tiers?.advanced) {
-      setAdvancedTitle(data.tiers.advanced.title || "");
-      setAdvancedDesc(data.tiers.advanced.description || "");
-      setAdvancedDays(data.tiers.advanced.deliveryDays || 7);
-      setAdvancedPrice(data.tiers.advanced.price || 0);
-      setAdvancedHours(data.tiers.advanced.estimatedHours || 10);
-    }
-    if (data.serviceOptions) {
-      setServiceOptions(data.serviceOptions);
-    }
-    if (data.addOns) {
-      setAddOns(data.addOns);
-    }
-  };
 
-  const fetchSuggestions = async (
-    data: AnalysisResult, 
-    idea: string, 
-    title: string,
-    category: string
-  ) => {
+    if (!analysisData) {
+      toast({
+        title: "Missing Profile Data",
+        description: "Please complete the profile analysis first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
-      const result = await getPricingSuggestions(data, idea, title, category);
       
-      setSuggestions(result);
-      applySuggestions(result);
+      const result = await analyzePricingScreenshot({
+        screenshot,
+        analysisData,
+        projectIdea,
+        projectTitle,
+        projectCategory,
+        targetHourlyRate,
+      });
+
+      setAnalysis(result);
+      sessionStorage.setItem("pricingAnalysis", JSON.stringify(result));
+      sessionStorage.setItem("targetHourlyRate", targetHourlyRate.toString());
       
-      sessionStorage.setItem("pricingSuggestions", JSON.stringify(result));
+      toast({
+        title: "Analysis Complete",
+        description: "Your pricing recommendations are ready.",
+      });
     } catch (e: any) {
-      setError(e.message || "Failed to generate pricing suggestions. Please try again.");
+      setError(e.message || "Failed to analyze screenshot. Please try again.");
+      toast({
+        title: "Analysis Failed",
+        description: e.message || "Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRegenerate = () => {
-    if (analysisData && projectIdea) {
-      sessionStorage.removeItem("pricingSuggestions");
-      fetchSuggestions(analysisData, projectIdea, projectTitle, projectCategory);
+  const copyToClipboard = async (text: string, fieldLabel: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldLabel);
+      setTimeout(() => setCopiedField(null), 2000);
+      toast({
+        title: "Copied!",
+        description: `${fieldLabel} value copied to clipboard.`,
+      });
+    } catch (e) {
+      toast({
+        title: "Copy Failed",
+        description: "Please select and copy manually.",
+        variant: "destructive",
+      });
     }
   };
 
-  const toggleServiceOption = (index: number, tier: 'starter' | 'standard' | 'advanced') => {
-    setServiceOptions(prev => {
-      const updated = [...prev];
-      if (tier === 'starter') {
-        updated[index] = { ...updated[index], starterIncluded: !updated[index].starterIncluded };
-      } else if (tier === 'standard') {
-        updated[index] = { ...updated[index], standardIncluded: !updated[index].standardIncluded };
-      } else {
-        updated[index] = { ...updated[index], advancedIncluded: !updated[index].advancedIncluded };
-      }
-      return updated;
-    });
-  };
-
-  const handleAddCustomAddOn = () => {
-    if (customAddOn.trim() && customAddOnPrice) {
-      setAddOns(prev => [...prev, {
-        name: customAddOn.trim(),
-        price: parseFloat(customAddOnPrice) || 0,
-        rationale: "Custom add-on created by you"
-      }]);
-      setCustomAddOn("");
-      setCustomAddOnPrice("");
+  const getProfitabilityColor = (level: string) => {
+    switch (level) {
+      case "High":
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+      case "Medium":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
+      case "Low":
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  const removeAddOn = (index: number) => {
-    setAddOns(prev => prev.filter((_, i) => i !== index));
+  const getProfitabilityIcon = (level: string) => {
+    switch (level) {
+      case "High":
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
+      case "Medium":
+        return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
+      case "Low":
+        return <AlertTriangle className="w-4 h-4 text-red-600" />;
+      default:
+        return null;
+    }
   };
 
-  const showRationale = (field: string, rationale: string, tier?: string) => {
-    setSelectedRationale({ field, tier, rationale });
-  };
-
-  const renderTierCard = (
-    tierName: string,
-    title: string,
-    setTitle: (v: string) => void,
-    desc: string,
-    setDesc: (v: string) => void,
-    days: number,
-    setDays: (v: number) => void,
-    price: number,
-    setPrice: (v: number) => void,
-    hours: number,
-    setHours: (v: number) => void,
-    tierData: PricingTier | undefined,
-    isRecommended = false
-  ) => {
-    const effectiveRate = hours > 0 ? price / hours : 0;
-    const isSustainable = hours > 0 && effectiveRate >= targetHourlyRate;
-    
-    return (
-      <Card className={`relative ${isRecommended ? 'border-primary border-2 shadow-lg' : ''}`}>
-        {isRecommended && (
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-            <Badge className="bg-primary text-primary-foreground">Recommended</Badge>
-          </div>
-        )}
-        <CardHeader className="pb-2">
-          <CardTitle className="text-center">{tierName}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Tier Title</Label>
-              {tierData?.titleRationale && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-2 text-xs"
-                  onClick={() => showRationale("Title", tierData.titleRationale, tierName)}
-                  data-testid={`button-rationale-title-${tierName.toLowerCase()}`}
-                >
-                  <Info className="w-3 h-3 mr-1" />
-                  Why?
-                </Button>
-              )}
-            </div>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Tier title..."
-              maxLength={30}
-              data-testid={`input-title-${tierName.toLowerCase()}`}
-            />
-            <p className="text-xs text-muted-foreground text-right">{title.length}/30</p>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Description</Label>
-              {tierData?.descriptionRationale && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-2 text-xs"
-                  onClick={() => showRationale("Description", tierData.descriptionRationale, tierName)}
-                  data-testid={`button-rationale-desc-${tierName.toLowerCase()}`}
-                >
-                  <Info className="w-3 h-3 mr-1" />
-                  Why?
-                </Button>
-              )}
-            </div>
-            <Textarea
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              placeholder="What's included..."
-              maxLength={80}
-              className="h-20 resize-none"
-              data-testid={`input-desc-${tierName.toLowerCase()}`}
-            />
-            <p className="text-xs text-muted-foreground text-right">{desc.length}/80</p>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Delivery Days</Label>
-              {tierData?.deliveryRationale && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-2 text-xs"
-                  onClick={() => showRationale("Delivery Time", tierData.deliveryRationale, tierName)}
-                  data-testid={`button-rationale-days-${tierName.toLowerCase()}`}
-                >
-                  <Info className="w-3 h-3 mr-1" />
-                  Why?
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <Input
-                type="number"
-                value={days}
-                onChange={(e) => setDays(parseInt(e.target.value) || 1)}
-                min={1}
-                max={365}
-                className="w-24"
-                data-testid={`input-days-${tierName.toLowerCase()}`}
-              />
-              <span className="text-sm text-muted-foreground">days</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Estimated Hours</Label>
-              {tierData?.estimatedHoursRationale && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-2 text-xs"
-                  onClick={() => showRationale("Estimated Hours", tierData.estimatedHoursRationale, tierName)}
-                  data-testid={`button-rationale-hours-${tierName.toLowerCase()}`}
-                >
-                  <Info className="w-3 h-3 mr-1" />
-                  Why?
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Timer className="w-4 h-4 text-muted-foreground" />
-              <Input
-                type="number"
-                value={hours}
-                onChange={(e) => setHours(parseFloat(e.target.value) || 1)}
-                min={0.5}
-                step={0.5}
-                className="w-24"
-                data-testid={`input-hours-${tierName.toLowerCase()}`}
-              />
-              <span className="text-sm text-muted-foreground">hrs</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Price</Label>
-              {tierData?.priceRationale && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-2 text-xs"
-                  onClick={() => showRationale("Price", tierData.priceRationale, tierName)}
-                  data-testid={`button-rationale-price-${tierName.toLowerCase()}`}
-                >
-                  <Info className="w-3 h-3 mr-1" />
-                  Why?
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-muted-foreground" />
-              <Input
-                type="number"
-                value={price}
-                onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-                min={0}
-                step={5}
-                className="w-32"
-                data-testid={`input-price-${tierName.toLowerCase()}`}
-              />
-            </div>
-          </div>
-
-          <div className="pt-3 border-t space-y-3">
-            <p className="text-2xl font-bold text-center">${price.toFixed(2)}</p>
-            
-            <div className={`rounded-lg p-3 ${isSustainable ? 'bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800' : 'bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800'}`}>
-              <div className="flex items-center justify-center gap-2 mb-1">
-                {isSustainable ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-medium text-green-700 dark:text-green-400" data-testid={`badge-sustainable-${tierName.toLowerCase()}`}>Sustainable</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle className="w-4 h-4 text-orange-600" />
-                    <span className="text-sm font-medium text-orange-700 dark:text-orange-400" data-testid={`badge-low-margin-${tierName.toLowerCase()}`}>Low Margin</span>
-                  </>
-                )}
-              </div>
-              <p className="text-xs text-center text-muted-foreground">
-                Effective Rate: <span className={`font-semibold ${isSustainable ? 'text-green-600' : 'text-orange-600'}`}>${effectiveRate.toFixed(0)}/hr</span>
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  if (error) {
+  if (error && !screenshot) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
         <Card className="max-w-md">
@@ -437,40 +219,27 @@ export default function Pricing() {
               <ArrowLeft className="w-4 h-4" />
               Back to Project
             </Button>
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="gap-1">
-                <Sparkles className="w-3 h-3" />
-                Price & Scope
-              </Badge>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleRegenerate}
-                disabled={isLoading}
-                className="gap-2"
-                data-testid="button-regenerate"
-              >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-                Regenerate
-              </Button>
-            </div>
+            <Badge variant="secondary" className="gap-1">
+              <Sparkles className="w-3 h-3" />
+              Visual Pricing Analysis
+            </Badge>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-3 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
               <div className="mb-6">
                 <h1 className="text-3xl font-serif font-bold text-foreground mb-2">
-                  Data-Driven Pricing Strategy
+                  Visual-First Pricing Strategy
                 </h1>
                 <p className="text-muted-foreground">
-                  AI-optimized pricing tiers based on your skills, market research, and competitive analysis.
+                  Upload a screenshot of your Upwork pricing page and let AI tell you exactly what to fill in each field.
                 </p>
               </div>
 
@@ -483,7 +252,7 @@ export default function Pricing() {
                       </div>
                       <div>
                         <h3 className="font-medium text-sm">My Target Hourly Rate</h3>
-                        <p className="text-xs text-muted-foreground">Used to calculate if each tier is sustainable for you</p>
+                        <p className="text-xs text-muted-foreground">AI will calculate if prices meet your profitability goal</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -506,249 +275,158 @@ export default function Pricing() {
                 </CardContent>
               </Card>
 
-              {isLoading ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Image className="w-5 h-5 text-primary" />
+                    Upload Pricing Page Screenshot
+                  </CardTitle>
+                  <CardDescription>
+                    Take a screenshot of the Upwork pricing form for your project category. The AI will identify every field and tell you what to enter.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <FileUpload
+                    onFileSelect={setScreenshot}
+                    selectedFile={screenshot}
+                    accept="image/*"
+                    label="Upload Screenshot"
+                    description="Drag & drop your Upwork pricing page screenshot, or click to browse"
+                  />
+
+                  {screenshot && (
+                    <div className="rounded-lg border overflow-hidden">
+                      <img
+                        src={URL.createObjectURL(screenshot)}
+                        alt="Pricing page screenshot"
+                        className="w-full h-auto max-h-96 object-contain bg-slate-100 dark:bg-slate-800"
+                        data-testid="image-screenshot-preview"
+                      />
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handleAnalyze}
+                    disabled={!screenshot || isLoading}
+                    className="w-full gap-2"
+                    size="lg"
+                    data-testid="button-analyze"
+                  >
+                    {isLoading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Analyzing Screenshot...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        Analyze Pricing Page
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {isLoading && (
                 <Card>
-                  <CardContent className="pt-6 space-y-6">
-                    <div className="flex items-center justify-center py-12">
+                  <CardContent className="pt-6 space-y-4">
+                    <div className="flex items-center justify-center py-8">
                       <div className="text-center">
                         <RefreshCw className="w-10 h-10 text-primary animate-spin mx-auto mb-4" />
-                        <p className="font-medium mb-1">Analyzing Market Pricing Data...</p>
+                        <p className="font-medium mb-1">Analyzing Your Pricing Page...</p>
                         <p className="text-sm text-muted-foreground">
-                          Researching competitive rates and optimal pricing strategies
+                          Identifying fields, calculating optimal values, and checking profitability
                         </p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              ) : (
-                <div className="space-y-6">
+              )}
+
+              {analysis && !isLoading && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-6"
+                >
                   <Card>
-                    <CardHeader className="pb-3">
+                    <CardHeader>
                       <div className="flex items-center justify-between">
                         <div>
                           <CardTitle className="flex items-center gap-2">
-                            <DollarSign className="w-5 h-5 text-green-600" />
-                            Create Pricing Tiers
+                            <Lightbulb className="w-5 h-5 text-amber-500" />
+                            AI Field Recommendations
                           </CardTitle>
                           <CardDescription>
-                            Customize your project with 1 or 3 pricing tiers
+                            Copy these values to your Upwork pricing form
                           </CardDescription>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor="tier-toggle" className="text-sm">3 Tiers</Label>
-                          <Switch 
-                            id="tier-toggle"
-                            checked={use3Tiers}
-                            onCheckedChange={setUse3Tiers}
-                            data-testid="switch-3-tiers"
-                          />
-                        </div>
+                        <Badge className={getProfitabilityColor(analysis.estimatedProfitability)}>
+                          {getProfitabilityIcon(analysis.estimatedProfitability)}
+                          <span className="ml-1">{analysis.estimatedProfitability} Profitability</span>
+                        </Badge>
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className={`grid gap-4 ${use3Tiers ? 'grid-cols-1 md:grid-cols-3' : 'max-w-md mx-auto'}`}>
-                        {use3Tiers ? (
-                          <>
-                            {renderTierCard(
-                              "Starter",
-                              starterTitle, setStarterTitle,
-                              starterDesc, setStarterDesc,
-                              starterDays, setStarterDays,
-                              starterPrice, setStarterPrice,
-                              starterHours, setStarterHours,
-                              suggestions?.tiers?.starter
-                            )}
-                            {renderTierCard(
-                              "Standard",
-                              standardTitle, setStandardTitle,
-                              standardDesc, setStandardDesc,
-                              standardDays, setStandardDays,
-                              standardPrice, setStandardPrice,
-                              standardHours, setStandardHours,
-                              suggestions?.tiers?.standard,
-                              true
-                            )}
-                            {renderTierCard(
-                              "Advanced",
-                              advancedTitle, setAdvancedTitle,
-                              advancedDesc, setAdvancedDesc,
-                              advancedDays, setAdvancedDays,
-                              advancedPrice, setAdvancedPrice,
-                              advancedHours, setAdvancedHours,
-                              suggestions?.tiers?.advanced
-                            )}
-                          </>
-                        ) : (
-                          renderTierCard(
-                            "Standard",
-                            standardTitle, setStandardTitle,
-                            standardDesc, setStandardDesc,
-                            standardDays, setStandardDays,
-                            standardPrice, setStandardPrice,
-                            standardHours, setStandardHours,
-                            suggestions?.tiers?.standard
-                          )
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {use3Tiers && serviceOptions.length > 0 && (
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center gap-2">
-                          <Check className="w-5 h-5 text-blue-600" />
-                          Service Tier Options
-                        </CardTitle>
-                        <CardDescription>
-                          Define what's included in each tier
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead>
-                              <tr className="border-b">
-                                <th className="text-left py-2 px-3 font-medium">Feature</th>
-                                <th className="text-center py-2 px-3 font-medium">Starter</th>
-                                <th className="text-center py-2 px-3 font-medium">Standard</th>
-                                <th className="text-center py-2 px-3 font-medium">Advanced</th>
-                                <th className="text-left py-2 px-3 font-medium w-12"></th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {serviceOptions.map((option, idx) => (
-                                <tr key={idx} className="border-b last:border-0">
-                                  <td className="py-3 px-3">
-                                    <span className="font-medium">{option.name}</span>
-                                  </td>
-                                  <td className="text-center py-3 px-3">
-                                    <Checkbox 
-                                      checked={option.starterIncluded}
-                                      onCheckedChange={() => toggleServiceOption(idx, 'starter')}
-                                      data-testid={`checkbox-${option.name.toLowerCase().replace(/\s+/g, '-')}-starter`}
-                                    />
-                                  </td>
-                                  <td className="text-center py-3 px-3">
-                                    <Checkbox 
-                                      checked={option.standardIncluded}
-                                      onCheckedChange={() => toggleServiceOption(idx, 'standard')}
-                                      data-testid={`checkbox-${option.name.toLowerCase().replace(/\s+/g, '-')}-standard`}
-                                    />
-                                  </td>
-                                  <td className="text-center py-3 px-3">
-                                    <Checkbox 
-                                      checked={option.advancedIncluded}
-                                      onCheckedChange={() => toggleServiceOption(idx, 'advanced')}
-                                      data-testid={`checkbox-${option.name.toLowerCase().replace(/\s+/g, '-')}-advanced`}
-                                    />
-                                  </td>
-                                  <td className="py-3 px-3">
-                                    {option.rationale && (
-                                      <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-6 px-2"
-                                        onClick={() => showRationale(option.name, option.rationale)}
-                                        data-testid={`button-rationale-${option.name.toLowerCase().replace(/\s+/g, '-')}`}
-                                      >
-                                        <Info className="w-3 h-3" />
-                                      </Button>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2">
-                        <Plus className="w-5 h-5 text-purple-600" />
-                        Choose Add-ons (Optional)
-                      </CardTitle>
-                      <CardDescription>
-                        Extra services clients can purchase
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {addOns.map((addOn, idx) => (
-                          <div 
+                      <div className="space-y-4">
+                        {analysis.fields.map((field, idx) => (
+                          <div
                             key={idx}
-                            className="flex items-center justify-between p-3 rounded-lg border bg-slate-50 dark:bg-slate-800/50"
+                            className="p-4 rounded-lg border bg-slate-50 dark:bg-slate-800/50 space-y-3"
+                            data-testid={`field-recommendation-${idx}`}
                           >
-                            <div className="flex items-center gap-3">
-                              <Checkbox defaultChecked data-testid={`checkbox-addon-${idx}`} />
-                              <div>
-                                <p className="font-medium text-sm">{addOn.name}</p>
-                                <p className="text-xs text-muted-foreground">+${addOn.price}</p>
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Label className="font-semibold text-sm">{field.label}</Label>
+                                  <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <code className="px-3 py-2 rounded bg-white dark:bg-slate-900 border text-sm font-mono flex-1">
+                                    {field.value}
+                                  </code>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => copyToClipboard(field.value, field.label)}
+                                    className="shrink-0"
+                                    data-testid={`button-copy-field-${idx}`}
+                                  >
+                                    {copiedField === field.label ? (
+                                      <Check className="w-4 h-4 text-green-600" />
+                                    ) : (
+                                      <Copy className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                              {addOn.rationale && addOn.rationale !== "Custom add-on created by you" && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-6 px-2"
-                                  onClick={() => showRationale(addOn.name, addOn.rationale)}
-                                  data-testid={`button-rationale-addon-${idx}`}
-                                >
-                                  <Info className="w-3 h-3" />
-                                </Button>
-                              )}
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-6 px-2 text-red-500 hover:text-red-700"
-                                onClick={() => removeAddOn(idx)}
-                                data-testid={`button-remove-addon-${idx}`}
-                              >
-                                <X className="w-3 h-3" />
-                              </Button>
+                            <div className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-800">
+                              <span className="font-medium text-amber-700 dark:text-amber-400">Rationale: </span>
+                              {field.rationale}
                             </div>
                           </div>
                         ))}
                       </div>
-
-                      <Separator />
-
-                      <div className="flex items-center gap-3">
-                        <Plus className="w-4 h-4 text-muted-foreground" />
-                        <Input
-                          value={customAddOn}
-                          onChange={(e) => setCustomAddOn(e.target.value)}
-                          placeholder="Custom add-on name"
-                          className="flex-1"
-                          data-testid="input-custom-addon-name"
-                        />
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="w-4 h-4 text-muted-foreground" />
-                          <Input
-                            type="number"
-                            value={customAddOnPrice}
-                            onChange={(e) => setCustomAddOnPrice(e.target.value)}
-                            placeholder="Price"
-                            className="w-24"
-                            data-testid="input-custom-addon-price"
-                          />
-                        </div>
-                        <Button 
-                          variant="outline"
-                          onClick={handleAddCustomAddOn}
-                          disabled={!customAddOn.trim() || !customAddOnPrice}
-                          data-testid="button-add-custom-addon"
-                        >
-                          Add
-                        </Button>
-                      </div>
                     </CardContent>
                   </Card>
-                </div>
+
+                  {analysis.strategyNote && (
+                    <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Lightbulb className="w-4 h-4 text-blue-600" />
+                          Pricing Strategy Note
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                          {analysis.strategyNote}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </motion.div>
               )}
 
               <div className="flex items-center justify-between pt-4">
@@ -763,41 +441,52 @@ export default function Pricing() {
                 </div>
                 <Button 
                   className="gap-2"
-                  disabled={isLoading || (use3Tiers ? !starterPrice || !standardPrice || !advancedPrice : !standardPrice)}
+                  disabled={!analysis}
                   onClick={() => {
-                    const pricingSelections = {
-                      use3Tiers,
+                    sessionStorage.setItem("pricingAnalysis", JSON.stringify(analysis));
+                    sessionStorage.setItem("targetHourlyRate", targetHourlyRate.toString());
+                    
+                    const ep = analysis?.extractedPricing;
+                    const has3Tiers = !!(ep?.starter && ep?.advanced);
+                    
+                    const backwardCompatiblePricing = {
+                      use3Tiers: has3Tiers,
                       targetHourlyRate,
                       tiers: {
-                        starter: use3Tiers ? {
-                          title: starterTitle,
-                          description: starterDesc,
-                          deliveryDays: starterDays,
-                          price: starterPrice,
-                          estimatedHours: starterHours
+                        starter: ep?.starter ? {
+                          title: ep.starter.title,
+                          description: ep.starter.description,
+                          deliveryDays: ep.starter.deliveryDays,
+                          price: ep.starter.price,
+                          estimatedHours: ep.starter.estimatedHours,
                         } : null,
-                        standard: {
-                          title: standardTitle,
-                          description: standardDesc,
-                          deliveryDays: standardDays,
-                          price: standardPrice,
-                          estimatedHours: standardHours
+                        standard: ep?.standard ? {
+                          title: ep.standard.title,
+                          description: ep.standard.description,
+                          deliveryDays: ep.standard.deliveryDays,
+                          price: ep.standard.price,
+                          estimatedHours: ep.standard.estimatedHours,
+                        } : {
+                          title: "Standard",
+                          description: "Professional service",
+                          deliveryDays: 5,
+                          price: 200,
+                          estimatedHours: 5,
                         },
-                        advanced: use3Tiers ? {
-                          title: advancedTitle,
-                          description: advancedDesc,
-                          deliveryDays: advancedDays,
-                          price: advancedPrice,
-                          estimatedHours: advancedHours
-                        } : null
+                        advanced: ep?.advanced ? {
+                          title: ep.advanced.title,
+                          description: ep.advanced.description,
+                          deliveryDays: ep.advanced.deliveryDays,
+                          price: ep.advanced.price,
+                          estimatedHours: ep.advanced.estimatedHours,
+                        } : null,
                       },
-                      serviceOptions: serviceOptions.filter(opt => 
-                        opt.starterIncluded || opt.standardIncluded || opt.advancedIncluded
-                      ),
-                      addOns: addOns
+                      serviceOptions: [],
+                      addOns: [],
+                      visualAnalysis: analysis,
                     };
-                    sessionStorage.setItem("pricingSelections", JSON.stringify(pricingSelections));
-                    sessionStorage.removeItem("gallerySuggestions");
+                    sessionStorage.setItem("pricingSelections", JSON.stringify(backwardCompatiblePricing));
+                    
                     navigate("/gallery");
                   }}
                   data-testid="button-continue"
@@ -815,106 +504,53 @@ export default function Pricing() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-primary" />
-                    Pricing Strategy
+                    Project Context
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground">
-                    Based on marketplace intelligence
-                  </p>
                 </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-5/6" />
-                    </div>
-                  ) : suggestions?.pricingStrategy ? (
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {suggestions.pricingStrategy}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Strategy insights will appear once analysis is complete.
-                    </p>
-                  )}
+                <CardContent className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Project Title</Label>
+                    <p className="font-medium text-sm">{projectTitle}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Category</Label>
+                    <p className="font-medium text-sm">{projectCategory}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Project Idea</Label>
+                    <p className="text-sm text-muted-foreground line-clamp-3">{projectIdea}</p>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Info className="w-5 h-5 text-blue-600" />
-                    Market Context
+                    <Lightbulb className="w-5 h-5 text-amber-600" />
+                    How It Works
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {isLoading ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                    </div>
-                  ) : suggestions?.marketContext ? (
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {suggestions.marketContext}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Market context will appear once analysis is complete.
-                    </p>
-                  )}
+                  <ol className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-amber-600">1.</span>
+                      Go to your Upwork project and open the pricing form
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-amber-600">2.</span>
+                      Take a screenshot of the entire pricing page
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-amber-600">3.</span>
+                      Upload it here and click "Analyze"
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-amber-600">4.</span>
+                      Copy each recommended value to Upwork
+                    </li>
+                  </ol>
                 </CardContent>
               </Card>
-
-              {selectedRationale && (
-                <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Lightbulb className="w-4 h-4 text-amber-600" />
-                      Why This {selectedRationale.field}?
-                      {selectedRationale.tier && (
-                        <Badge variant="outline" className="ml-auto text-xs">
-                          {selectedRationale.tier}
-                        </Badge>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedRationale.rationale}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {analysisData && !isLoading && (
-                <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-green-600" />
-                      Your Profile Advantage
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Proficiency</span>
-                      <Badge variant="outline" className={
-                        analysisData.proficiency >= 80 ? "bg-green-100 text-green-700" :
-                        analysisData.proficiency >= 60 ? "bg-blue-100 text-blue-700" :
-                        "bg-amber-100 text-amber-700"
-                      }>
-                        {analysisData.proficiency}%
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Position</span>
-                      <span className="text-xs font-medium">
-                        {analysisData.proficiency >= 80 ? 'Premium' :
-                         analysisData.proficiency >= 60 ? 'Mid-Range' : 'Competitive'}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           </div>
         </div>

@@ -535,6 +535,160 @@ Return ONLY valid JSON, no additional text.`;
   };
 }
 
+interface PricingScreenshotParams {
+  imageBuffer: Buffer;
+  mimeType: string;
+  analysisData: AnalysisResult;
+  projectIdea: string;
+  projectTitle: string;
+  projectCategory: string;
+  targetHourlyRate: number;
+}
+
+interface FieldRecommendation {
+  label: string;
+  value: string;
+  rationale: string;
+}
+
+interface ExtractedTier {
+  title: string;
+  price: number;
+  deliveryDays: number;
+  description: string;
+  estimatedHours: number;
+}
+
+interface PricingScreenshotAnalysis {
+  fields: FieldRecommendation[];
+  extractedPricing?: {
+    starter?: ExtractedTier;
+    standard?: ExtractedTier;
+    advanced?: ExtractedTier;
+  };
+  estimatedProfitability: "High" | "Medium" | "Low";
+  strategyNote: string;
+}
+
+export async function analyzePricingScreenshot(
+  params: PricingScreenshotParams
+): Promise<PricingScreenshotAnalysis> {
+  const { imageBuffer, mimeType, analysisData, projectIdea, projectTitle, projectCategory, targetHourlyRate } = params;
+
+  const base64Image = imageBuffer.toString("base64");
+  
+  const mediaType = mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+
+  const prompt = `You are an expert Upwork Pricing Strategist. Analyze the attached screenshot of an Upwork pricing page.
+
+FREELANCER PROFILE:
+- Archetype: ${analysisData.archetype}
+- Proficiency Level: ${analysisData.proficiency}%
+- Core Skills: ${analysisData.skills.join(", ")}
+- Target Client: ${analysisData.clientGap}
+- Strategic Position: ${analysisData.suggestedPivot}
+- Recommended Keywords: ${analysisData.recommendedKeywords.join(", ")}
+
+PROJECT CONTEXT:
+- Project Title: "${projectTitle}"
+- Category: ${projectCategory}
+- Project Idea: "${projectIdea}"
+- Target Hourly Rate: $${targetHourlyRate}/hr (the freelancer's sustainability goal)
+
+YOUR TASK:
+1. Identify EVERY input field, checkbox, dropdown, and editable element visible in the screenshot.
+2. For EACH field you identify, tell the user EXACTLY what to fill in based on the project context.
+3. If you see tier pricing (Starter/Standard/Advanced), suggest competitive prices that align with the target hourly rate.
+4. If you see "Add-ons" or "Extra Services", suggest which ones to check/enable and what prices to set.
+5. Calculate if your suggested prices will meet the freelancer's profitability goal of $${targetHourlyRate}/hr.
+
+PRICING STRATEGY RULES:
+- Stay focused on the SAME core service across all tiers (no service bloat)
+- Starter = Minimum Viable Result (basic scope)
+- Standard = Professional Standard (what 80% of clients want)  
+- Advanced = Same service + more assets/rights (source files, unlimited revisions)
+- Price the Standard tier competitively for the market
+
+Return your analysis in this JSON format:
+{
+  "fields": [
+    {
+      "label": "Exact name of the field as shown in screenshot",
+      "value": "What to type or select",
+      "rationale": "Why this value based on project/market"
+    }
+  ],
+  "extractedPricing": {
+    "starter": { "title": "Tier title", "price": 75, "deliveryDays": 3, "description": "Short description", "estimatedHours": 2 },
+    "standard": { "title": "Tier title", "price": 200, "deliveryDays": 5, "description": "Short description", "estimatedHours": 5 },
+    "advanced": { "title": "Tier title", "price": 400, "deliveryDays": 7, "description": "Short description", "estimatedHours": 8 }
+  },
+  "estimatedProfitability": "High" | "Medium" | "Low",
+  "strategyNote": "2-3 sentences of strategic advice for this pricing setup"
+}
+
+NOTE: extractedPricing should contain the tier values you recommend based on the screenshot. If the screenshot shows 3 tiers, populate all three. If it shows only 1 tier, only populate "standard". Estimate hours based on the scope/deliverables.
+
+IMPORTANT:
+- List fields in the order they appear in the screenshot (top to bottom, left to right)
+- For checkboxes, say "Check" or "Uncheck"
+- For dropdowns, give the exact option to select
+- For text fields, give the exact text to enter
+- Include tier names/titles, descriptions, prices, delivery days, features - everything visible
+
+Return ONLY valid JSON, no additional text.`;
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 4000,
+    temperature: 0,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: mediaType,
+              data: base64Image,
+            },
+          },
+          {
+            type: "text",
+            text: prompt,
+          },
+        ],
+      },
+    ],
+  });
+
+  const content = message.content[0];
+  if (content.type !== "text") {
+    throw new Error("Unexpected response type from AI");
+  }
+
+  const result = content.text;
+  const jsonMatch = result.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("No valid JSON found in AI response");
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (parseError) {
+    throw new Error("AI response contained invalid JSON format");
+  }
+
+  return {
+    fields: parsed.fields || [],
+    extractedPricing: parsed.extractedPricing || undefined,
+    estimatedProfitability: parsed.estimatedProfitability || "Medium",
+    strategyNote: parsed.strategyNote || "",
+  };
+}
+
 export async function generateGallerySuggestions(
   analysisData: AnalysisResult,
   projectIdea: string,

@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
-import { analyzeProfile, generateProjectSuggestions, generatePricingSuggestions, generateGallerySuggestions, generateProcessSuggestions, generateDescriptionSuggestions } from "./ai-service";
+import { analyzeProfile, generateProjectSuggestions, generatePricingSuggestions, analyzePricingScreenshot, generateGallerySuggestions, generateProcessSuggestions, generateDescriptionSuggestions } from "./ai-service";
 import { UPWORK_CATEGORIES, PROJECT_ATTRIBUTES, TITLE_BEST_PRACTICES } from "./upwork-knowledge";
 import { createNotionPage } from "./notion-service";
 
@@ -195,6 +195,63 @@ export async function registerRoutes(
       
       res.status(500).json({ 
         error: "Failed to generate pricing suggestions. Please try again." 
+      });
+    }
+  });
+
+  app.post("/api/analyze-pricing-screenshot", upload.single("screenshot"), async (req: Request, res) => {
+    try {
+      const file = (req as any).file;
+      if (!file) {
+        return res.status(400).json({ error: "Screenshot image is required" });
+      }
+
+      const { analysisData: analysisDataStr, projectIdea, projectTitle, projectCategory, targetHourlyRate } = req.body;
+
+      if (!analysisDataStr) {
+        return res.status(400).json({ error: "Profile analysis data is required" });
+      }
+
+      let analysisData;
+      try {
+        analysisData = JSON.parse(analysisDataStr);
+      } catch (e) {
+        return res.status(400).json({ error: "Invalid analysis data format" });
+      }
+
+      if (!projectIdea || projectIdea.trim().length < 10) {
+        return res.status(400).json({ error: "Project idea is required" });
+      }
+
+      if (!projectTitle) {
+        return res.status(400).json({ error: "Project title is required" });
+      }
+
+      const imageBuffer = file.buffer;
+      const mimeType = file.mimetype;
+
+      const analysis = await analyzePricingScreenshot({
+        imageBuffer,
+        mimeType,
+        analysisData,
+        projectIdea,
+        projectTitle,
+        projectCategory: projectCategory || "General",
+        targetHourlyRate: parseFloat(targetHourlyRate) || 100,
+      });
+
+      res.json(analysis);
+    } catch (error: any) {
+      console.error("Error analyzing pricing screenshot:", error);
+
+      if (error.message?.includes("JSON")) {
+        return res.status(500).json({
+          error: "AI returned an unexpected format. Please try again."
+        });
+      }
+
+      res.status(500).json({
+        error: error.message || "Failed to analyze pricing screenshot. Please try again."
       });
     }
   });
