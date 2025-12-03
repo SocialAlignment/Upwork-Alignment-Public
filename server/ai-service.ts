@@ -648,10 +648,11 @@ Energy Progression for Video:
 Generate comprehensive gallery content in this JSON format:
 {
   "thumbnailPrompt": {
-    "prompt": "A detailed, specific prompt for AI image generation optimized for Upwork Project Catalog covers. Must be 1000x750px (4:3 ratio). Include outcome-focused visuals (results, deliverables, before/after), industry-relevant signals (tech logos, tool interfaces), professional composition with high contrast. The prompt should be ready to copy and paste into Gemini/DALL-E/Midjourney. Make it 3-4 sentences with specific visual elements.",
-    "styleNotes": "Style direction (e.g., 'Modern tech-forward', 'Clean corporate', 'Creative agency aesthetic')",
+    "prompt": "A detailed prompt for high-quality Imagen 3 / Nano Banana image generation. MUST follow the Outcome-First composition rule: Foreground should feature a tangible deliverable (dashboard mockup, report page, app screen, polished document) with 'floating UI elements' to show depth and professionalism. Use cinematic lighting and 8k resolution. Background MUST be clean, solid, or gradient (NEVER blurry or bokeh backgrounds - these underperform on Upwork's white interface). Include specific industry-relevant visual elements that signal expertise. The prompt should be 3-4 sentences ready for copy/paste into Gemini.",
+    "styleNotes": "Style direction matching one of: 'Photorealistic Studio', '3D Isometric Tech', 'Abstract Data Flow', or 'Minimalist Brand' - choose based on the project category and target client",
     "colorPalette": ["#hexcolor1", "#hexcolor2", "#hexcolor3"],
-    "compositionTips": "Specific layout guidance following the rule of thirds, focal points, and visual hierarchy for 3-second clarity"
+    "compositionTips": "Specific layout guidance: primary deliverable in left two-thirds, floating accent elements in right third, clean background with subtle gradient. Ensure 3-second clarity - viewer should instantly understand what the freelancer delivers.",
+    "visualStyle": "One of: photorealistic, 3d-isometric, abstract-data, minimalist-brand - based on project type"
   },
   "videoScript": {
     "hook": "Opening 5-10 second scroll-stopper. Challenge an assumption, state a bold truth, or ask a thought-provoking question. High energy, direct, NO hype words like 'revolutionary'. Example tone: 'Here's the thing most people get wrong about [topic]...'",
@@ -697,7 +698,10 @@ Generate comprehensive gallery content in this JSON format:
 }
 
 IMPORTANT GUIDELINES:
-- Thumbnail prompt should be specific and ready to paste into Gemini/DALL-E/Midjourney
+- Thumbnail prompt should be specific and ready to paste into Gemini/Imagen 3
+- THUMBNAIL QUALITY: MUST include "cinematic lighting", "8k resolution" in the prompt. NEVER suggest blurry/bokeh backgrounds - use clean, solid, or gradient backgrounds only
+- OUTCOME-FIRST COMPOSITION: The foreground MUST feature a tangible deliverable (dashboard, report, app screen) with floating UI elements for depth
+- visualStyle MUST be one of: "photorealistic", "3d-isometric", "abstract-data", "minimalist-brand"
 - CRITICAL: If pricing tiers are provided above, the video script MUST mention the EXACT prices (e.g., "Starting at $${pricingData?.tiers?.starter?.price || pricingData?.tiers?.standard?.price || 'X'}"). Do NOT invent different prices.
 - The video script should reference the actual tier names and prices the user selected
 - Focus on client outcomes and benefits, not just features
@@ -754,12 +758,14 @@ Return ONLY valid JSON, no additional text.`;
     throw new Error("AI response contained invalid JSON format");
   }
 
+  const thumbnailPrompt = parsed.thumbnailPrompt || {};
   return {
-    thumbnailPrompt: parsed.thumbnailPrompt || {
-      prompt: "",
-      styleNotes: "",
-      colorPalette: [],
-      compositionTips: "",
+    thumbnailPrompt: {
+      prompt: thumbnailPrompt.prompt || "",
+      styleNotes: thumbnailPrompt.styleNotes || "",
+      colorPalette: thumbnailPrompt.colorPalette || [],
+      compositionTips: thumbnailPrompt.compositionTips || "",
+      visualStyle: thumbnailPrompt.visualStyle || "photorealistic",
     },
     videoScript: parsed.videoScript || {
       hook: "",

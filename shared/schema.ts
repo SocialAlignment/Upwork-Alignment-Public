@@ -134,6 +134,7 @@ export interface ThumbnailPrompt {
   styleNotes: string;
   colorPalette: string[];
   compositionTips: string;
+  visualStyle: string;
 }
 
 export interface VideoScript {

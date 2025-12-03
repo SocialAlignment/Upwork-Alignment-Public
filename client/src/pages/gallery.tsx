@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, RefreshCw, Image, Video, FileText, Copy, Check, Sparkles, Palette, Clock, Info, Lightbulb, Upload, X, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, RefreshCw, Image, Video, FileText, Copy, Check, Sparkles, Palette, Clock, Info, Lightbulb, Upload, X, User, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,9 +12,31 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { getGallerySuggestions } from "@/lib/api";
 import type { GallerySuggestion, VideoScript, SampleDocument } from "@shared/schema";
+
+const VISUAL_STYLES = {
+  "photorealistic": {
+    label: "Photorealistic Studio (Trust & Clarity)",
+    keywords: "professional studio photography, soft box lighting, clean white background, photorealistic, 8k resolution, crisp details, commercial product photography, cinematic lighting"
+  },
+  "3d-isometric": {
+    label: "3D Isometric Tech (SaaS & Modern)",
+    keywords: "3D isometric illustration, octane render, unreal engine 5, volumetric lighting, floating UI elements, tech aesthetic, modern gradient background, 8k resolution, cinematic lighting"
+  },
+  "abstract-data": {
+    label: "Abstract Data Flow (Analytics & AI)",
+    keywords: "abstract data visualization, flowing particle effects, neural network nodes, glowing connections, dark gradient background with accent colors, futuristic UI, 8k resolution, cinematic lighting"
+  },
+  "minimalist-brand": {
+    label: "Minimalist Brand (High-End Design)",
+    keywords: "minimalist design, premium brand aesthetic, clean geometric shapes, subtle shadows, solid color background, high-end luxury feel, 8k resolution, cinematic lighting"
+  }
+} as const;
+
+type VisualStyleKey = keyof typeof VISUAL_STYLES;
 
 interface AnalysisResult {
   archetype: string;
@@ -70,6 +92,7 @@ export default function Gallery() {
   const [compositionTips, setCompositionTips] = useState("");
   const [noTextOnImage, setNoTextOnImage] = useState(false);
   const [basePrompt, setBasePrompt] = useState("");
+  const [visualStyle, setVisualStyle] = useState<VisualStyleKey>("photorealistic");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -146,6 +169,9 @@ export default function Gallery() {
       setStyleNotes(suggestions.thumbnailPrompt.styleNotes || "");
       setColorPalette(suggestions.thumbnailPrompt.colorPalette || []);
       setCompositionTips(suggestions.thumbnailPrompt.compositionTips || "");
+      if (suggestions.thumbnailPrompt.visualStyle && suggestions.thumbnailPrompt.visualStyle in VISUAL_STYLES) {
+        setVisualStyle(suggestions.thumbnailPrompt.visualStyle as VisualStyleKey);
+      }
     }
   }, [suggestions]);
 
@@ -156,8 +182,13 @@ export default function Gallery() {
       prompt = `Feature the ${heroImageDescription.trim()} prominently in the composition. ${prompt}`;
     }
     
+    const styleKeywords = VISUAL_STYLES[visualStyle]?.keywords || "";
+    if (styleKeywords) {
+      prompt += ` Visual style: ${styleKeywords}.`;
+    }
+    
     if (styleNotes.trim()) {
-      prompt += ` Style: ${styleNotes.trim()}.`;
+      prompt += ` Style notes: ${styleNotes.trim()}.`;
     }
     
     if (colorPalette.length > 0) {
@@ -168,7 +199,7 @@ export default function Gallery() {
       prompt += ` Composition: ${compositionTips.trim()}.`;
     }
     
-    prompt += " Image dimensions: 1000x750px (4:3 aspect ratio, Upwork Project Catalog standard). High-resolution, professional quality.";
+    prompt += " Image dimensions: 1000x750px (4:3 aspect ratio, Upwork Project Catalog standard). Clean, solid, or gradient background (no blurry backgrounds). High-resolution, professional quality.";
     
     if (noTextOnImage) {
       prompt += " IMPORTANT: Do NOT include any text, captions, titles, labels, or typography on the image. The image should be purely visual with no written elements.";
@@ -351,6 +382,35 @@ export default function Gallery() {
                         </div>
                         <p className="text-xs text-muted-foreground ml-6">
                           When checked, the prompt will reference "the person in the attached reference photo" - simply attach your headshot when pasting into Gemini
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Layers className="w-5 h-5 text-indigo-600" />
+                          Visual Style
+                        </CardTitle>
+                        <CardDescription>
+                          Select a high-converting visual style optimized for Imagen 3 / Nano Banana
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Select value={visualStyle} onValueChange={(value) => setVisualStyle(value as VisualStyleKey)}>
+                          <SelectTrigger className="w-full" data-testid="select-visual-style">
+                            <SelectValue placeholder="Select visual style" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(VISUAL_STYLES).map(([key, style]) => (
+                              <SelectItem key={key} value={key} data-testid={`select-style-${key}`}>
+                                {style.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          This injects optimized keywords like "8k resolution", "cinematic lighting", and style-specific render settings
                         </p>
                       </CardContent>
                     </Card>
