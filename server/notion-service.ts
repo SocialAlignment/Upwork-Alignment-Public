@@ -438,50 +438,86 @@ export async function createNotionPage(databaseId: string, projectData: ProjectD
     }
   }
 
+  const starterPrice = projectData.pricing?.tiers.starter?.price || 0;
   const standardPrice = projectData.pricing?.tiers.standard?.price || 0;
+  const advancedPrice = projectData.pricing?.tiers.advanced?.price || 0;
+  const standardHours = projectData.pricing?.tiers.standard?.estimatedHours || 0;
   const targetRate = projectData.pricing?.targetHourlyRate || 100;
   const profitabilityStatus = calculateProfitabilityStatus(projectData.pricing);
 
   const baseProperties: Record<string, any> = {
-    title: {
+    'Project Title': {
       title: [{ text: { content: projectData.title || 'Untitled Project' } }]
     }
   };
 
   const optionalProperties: Record<string, any> = {};
+  
   if (projectData.category) {
     optionalProperties['Category'] = { select: { name: projectData.category } };
   }
+  
   if (projectData.archetype) {
     optionalProperties['Archetype'] = { rich_text: [{ text: { content: projectData.archetype } }] };
   }
+  
+  if (starterPrice > 0) {
+    optionalProperties['Pricing: Starter'] = { number: starterPrice };
+  }
   if (standardPrice > 0) {
+    optionalProperties['Pricing: Standard'] = { number: standardPrice };
     optionalProperties['Price'] = { number: standardPrice };
   }
+  if (advancedPrice > 0) {
+    optionalProperties['Pricing: Advanced'] = { number: advancedPrice };
+  }
+  
+  if (standardHours > 0) {
+    optionalProperties['Est. Hours'] = { number: standardHours };
+    optionalProperties['Est. Hours: Standard'] = { number: standardHours };
+  }
+  
   if (targetRate > 0) {
     optionalProperties['Target Rate'] = { number: targetRate };
   }
+  
   optionalProperties['Profitability'] = { select: { name: profitabilityStatus } };
-  optionalProperties['Status'] = { select: { name: 'Draft' } };
+  optionalProperties['Status'] = { select: { name: '🟡 Drafting' } };
+  optionalProperties['Last Updated'] = { date: { start: new Date().toISOString().split('T')[0] } };
 
   let response;
-  try {
-    response = await notion.pages.create({
-      parent: { database_id: databaseId },
-      properties: { ...baseProperties, ...optionalProperties },
-      children: children
-    });
-  } catch (error: any) {
-    if (error?.code === 'validation_error' && error?.message?.includes('property')) {
-      response = await notion.pages.create({
+  let propertiesToUse = { ...baseProperties, ...optionalProperties };
+  
+  const attemptCreate = async (props: Record<string, any>): Promise<any> => {
+    try {
+      return await notion.pages.create({
         parent: { database_id: databaseId },
-        properties: baseProperties,
+        properties: props,
         children: children
       });
-    } else {
+    } catch (error: any) {
+      if (error?.code === 'validation_error' && error?.message) {
+        const propertyMatch = error.message.match(/property\s+["']?([^"'\s]+)["']?/i) ||
+                              error.message.match(/["']([^"']+)["']\s+is not a property/i);
+        if (propertyMatch && propertyMatch[1]) {
+          const badProperty = propertyMatch[1];
+          const newProps = { ...props };
+          delete newProps[badProperty];
+          if (Object.keys(newProps).length > Object.keys(baseProperties).length) {
+            return attemptCreate(newProps);
+          }
+        }
+        return await notion.pages.create({
+          parent: { database_id: databaseId },
+          properties: baseProperties,
+          children: children
+        });
+      }
       throw error;
     }
-  }
+  };
+  
+  response = await attemptCreate(propertiesToUse);
 
   return {
     pageId: response.id,

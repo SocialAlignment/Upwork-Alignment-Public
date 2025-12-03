@@ -1,0 +1,114 @@
+Here’s a concise, implementation-facing summary you can pass to your Replit agent:
+
+---
+
+### Database: `Master Project Catalog`
+
+- **Location**
+    - Database name: `Master Project Catalog`
+    - Data source name: `Master Project Catalog`
+    - Purpose: Single source of truth for Upwork projects, pricing, and profitability.
+
+### Final Schema (properties)
+
+- `Project Title` — `title`
+- `Status` — `select`
+    - Options (exact text values):
+        - `🔴 Idea Phase`
+        - `🟡 Drafting`
+        - `🟢 Ready to Publish`
+        - `🔵 Live on Upwork`
+        - `⚫ Archived`
+- `Category` — `select`
+    - Options (exact text values):
+        - `Music Production`
+        - `AI Development`
+        - `Consulting`
+        - `Design`
+        - `Marketing`
+        - `Development`
+        - `Writing`
+        - `Strategy`
+        - `Other`
+- `Strategic Archetype` — `select`
+    - Options: `Specialist`, `Agency`, `Consultant`
+- `Archetype` — `text`
+    - Freeform archetype label (e.g. “Growth Marketing Specialist”).
+- `Pricing Strategy` — `multi_select`
+    - Options: `High Ticket`, `Loss Leader`, `Recurring`, `Fixed Price`
+- `Deliverables` — `multi_select`
+    - Options: `Source Files`, `Consultation`, `Dashboard`, `Report`, `App`
+- `Pricing: Starter` — `number` (currency, USD)
+- `Pricing: Standard` — `number` (currency, USD)
+- `Pricing: Advanced` — `number` (currency, USD)
+- `Price` — `number` (currency, USD)
+    - Duplicate “standard tier price” for quick reference and external mapping.
+- `Est. Hours` — `number`
+- `Est. Hours: Standard` — `number`
+- `Target Rate` — `number` (currency, USD)
+- `Profitability` — `select`
+    - Options (with semantics):
+        - `High Margin`
+        - `Sustainable`
+        - `Low Margin`
+        - `Unsustainable`
+        - `Needs Review`
+- `Profitability Score` — `formula`
+    - Description: `Pricing: Standard` ÷ `Est. Hours` (used as numeric profitability KPI).
+- `Live URL` — `url` (Upwork listing URL)
+- `Last Updated` — `date`
+
+### Key Views
+
+1. **`Master Project Catalog` (table)**
+    - Columns:
+        
+        `Project Title`, `Status`, `Category`, `Strategic Archetype`,
+        
+        `Pricing: Standard`, `Profitability Score`, `Pricing Strategy`,
+        
+        `Deliverables`, `Est. Hours`, `Price`, `Target Rate`, `Profitability`, `Archetype`.
+        
+2. **`All Projects` (table)**
+    - Columns (wide export view):
+        
+        `Project Title`, `Status`, `Category`, `Strategic Archetype`, `Archetype`,
+        
+        `Pricing Strategy`, `Deliverables`, `Pricing: Standard`, `Price`,
+        
+        `Target Rate`, `Profitability`, `Est. Hours`, `Profitability Score`,
+        
+        `Est. Hours: Standard`, `Last Updated`, `Live URL`,
+        
+        `Pricing: Advanced`, `Pricing: Starter`.
+        
+3. **`By Category` (board)**
+    - Grouped by `Category`.
+    - Card fields: `Project Title`, `Category`, `Strategic Archetype`, `Pricing Strategy`, `Price`, `Target Rate`, `Profitability`, `Status`.
+4. **`Profitability Check` (table)**
+    - Filter: `Profitability` in {`Low Margin`, `Unsustainable`}.
+    - Columns: `Project Title`, `Category`, `Strategic Archetype`, `Archetype`, `Price`, `Target Rate`, `Profitability`, `Status`, plus supporting pricing and effort fields.
+5. **`Ready to Publish` (table)**
+    - Filter: `Status` = `🟢 Ready to Publish`.
+    - Columns: `Project Title`, `Category`, `Strategic Archetype`, `Archetype`,
+        
+        `Pricing Strategy`, `Price`, `Target Rate`, `Profitability`, `Status`,
+        
+        `Est. Hours`, `Profitability Score`, plus supporting fields.
+        
+
+### Intent for the Agent
+
+- Treat **`Master Project Catalog`** as the **only canonical database** for:
+    - Upwork listings and draft projects
+    - Pricing / profitability calculations
+    - Archetypes, categories, and deliverables
+- When importing or updating via API:
+    - Map categorical data to the **exact string values** above.
+    - Use `Pricing: Standard` and `Est. Hours` to keep `Profitability Score` meaningful.
+    - Use `Price` and `Target Rate` as the primary numeric hooks for pricing logic and profit analysis.
+- Use the views primarily as:
+    - `All Projects` → full export / debug surface.
+    - `By Category` → organizational / Kanban grouping.
+    - `Profitability Check` → triage low/negative margin offers.
+    - `Ready to Publish` → pipeline of projects ready to go live.
