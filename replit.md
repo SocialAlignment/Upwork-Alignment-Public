@@ -77,6 +77,19 @@ Preferred communication style: Simple, everyday language.
 - Skills array and project portfolio
 - Strategic gaps (positioning, missing skills, client targeting)
 - Recommended keywords for profile optimization
+- Signature Mechanism (unique branded process name e.g., "The 4-Phase Growth Protocol")
+
+**Deterministic Prompt Handling**
+- All AI prompts use conditional market research sections (included only when available)
+- Empty string fallbacks when Perplexity fails (no placeholder prose)
+- Ensures consistent, deterministic outputs regardless of market research availability
+
+**Process Page (Requirements & Steps)**
+- Step 5 in the project creation flow (after Gallery)
+- AI generates contextual requirements and project steps based on project details
+- Each requirement includes: description (max 350 chars), required checkbox
+- Each step includes: title (max 75 chars), description (max 500 chars)
+- Session storage persistence for user edits with stable index-based IDs
 
 **Video Script Tone of Voice (Jonathan Sterritt Framework)**
 The gallery video script generation follows a comprehensive tone of voice framework:
