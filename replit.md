@@ -67,7 +67,8 @@ Preferred communication style: Simple, everyday language.
 ### AI Integration
 
 **AI Service Provider**
-- Anthropic Claude API via `@anthropic-ai/sdk`
+- Anthropic Claude API via `@anthropic-ai/sdk` (temperature: 0 for deterministic responses)
+- Perplexity API for real-time market research and pricing insights
 - Profile analysis through structured prompts requesting JSON responses
 - Analysis includes: archetype identification, proficiency scoring, skill extraction, gap analysis, and keyword recommendations
 
@@ -76,6 +77,20 @@ Preferred communication style: Simple, everyday language.
 - Skills array and project portfolio
 - Strategic gaps (positioning, missing skills, client targeting)
 - Recommended keywords for profile optimization
+
+**Video Script Tone of Voice (Jonathan Sterritt Framework)**
+The gallery video script generation follows a comprehensive tone of voice framework:
+- Core Formula: Systematic Expert + Trenches Experience + Direct Challenge + Transformative Enthusiasm
+- Voice Characteristics: Calm operator energy, no-BS directness, systematic confidence
+- Sentence Rhythm: Short punchy sentences, 3-beat structure (Hook/Problem → Bridge/Insight → Resolution/Action)
+- Language Patterns: "Here's the thing...", "Let's be honest", "Here's what actually works"
+- Forbidden Words: "revolutionary", "game-changing", "cutting-edge", "seamless"
+- Energy Progression: Hook (scroll-stopper) → Introduction (credibility) → Main Points (proof) → CTA (warm invitation)
+
+**Sample Document Suggestions (Data-Driven)**
+- Document suggestions are derived from actual profile analysis, not generic templates
+- Each document includes "dataEvidence" field referencing specific skills or projects from resume
+- Suggestions are tailored to freelancer's archetype and target client type
 
 ## External Dependencies
 

@@ -514,6 +514,58 @@ UPWORK COVER IMAGE BEST PRACTICES (Apply these to thumbnail prompt):
 - For marketing: show GA4 dashboards, engagement graphs, ROI charts
 - Avoid: generic stock photos, text-heavy designs, pixelated images, multiple unrelated services
 
+VIDEO SCRIPT TONE OF VOICE REQUIREMENTS (CRITICAL - Apply these to all script sections):
+
+Core Voice Formula: Systematic Expert + Trenches Experience + Direct Challenge + Transformative Enthusiasm
+
+Voice Characteristics:
+- Calm operator energy: "I've solved this problem before"
+- No-BS directness: "Here's what actually works"
+- Systematic confidence: "Let's build this step by step"
+- Confident, conversational, and a little witty
+- Enthusiasm without hype, authenticity over polish
+
+Sentence Rhythm:
+- Use short, punchy sentences when making key points
+- Lead with outcomes, not process: "Save 10 hours a week" before "Here's how"
+- Use conversation tone: Write like talking to a friend - casual but clear
+- 3-Beat Structure: Hook/Problem (short) → Bridge/Insight (medium) → Resolution/Action (definitive)
+
+Signature Language Patterns:
+- "Here's the thing..." (transition into key points)
+- "Let's be honest" (addressing uncomfortable truths)
+- "Here's what actually works" (contrasting with failed approaches)
+- "No BS" or "Real talk" (directness without profanity)
+- Use active voice: "You get..." not "This is provided..."
+
+What to ALWAYS do:
+- Lead with client outcome, not process
+- Challenge assumptions before presenting solutions
+- Use "amplify your expertise" not "replace your work"
+- Make it accessible - if a busy business owner can't understand it, simplify
+- Ground claims in real examples and specific results
+- End with clear next step
+
+What to NEVER do:
+- Use generic AI hype like "revolutionary" or "game-changing"
+- Promise "set it and forget it" or magic solutions
+- Sound like a corporate brochure or academic paper
+- Use passive voice excessively
+- Be arrogant - confident but not cocky
+- Make unsubstantiated claims without evidence
+
+Rhetorical Techniques:
+- Use the Rule of Three: "Build systems. Scale authority. Reclaim time."
+- Problem-solution contrasts: "You don't need more tools - you need one system that works"
+- Before-after framing: "Yesterday: 15 tools, scattered results. Today: One system, systematic results"
+- Strategic questions: "How many hours are you wasting on tasks that could be automated?"
+
+Energy Progression for Video:
+- Hook: High energy, scroll-stopping, challenge an assumption
+- Introduction: Confident, establish credibility quickly, genuine
+- Main Points: Systematic delivery, proof points, client outcomes
+- Call to Action: Warm invitation, clear next step, empowering not pushy
+
 Generate comprehensive gallery content in this JSON format:
 {
   "thumbnailPrompt": {
@@ -523,28 +575,28 @@ Generate comprehensive gallery content in this JSON format:
     "compositionTips": "Specific layout guidance following the rule of thirds, focal points, and visual hierarchy for 3-second clarity"
   },
   "videoScript": {
-    "hook": "Opening 5-10 second attention-grabbing statement",
-    "introduction": "15-second introduction of yourself and what you offer",
+    "hook": "Opening 5-10 second scroll-stopper. Challenge an assumption, state a bold truth, or ask a thought-provoking question. High energy, direct, NO hype words like 'revolutionary'. Example tone: 'Here's the thing most people get wrong about [topic]...'",
+    "introduction": "15-second confident intro. Establish credibility fast with specific experience. Use 'I've solved this' energy. Be genuine, not salesy. Example: 'I'm [name], and after [specific experience], here's what actually works...'",
     "mainPoints": [
       {
-        "point": "Key selling point 1",
+        "point": "Outcome-focused selling point using 3-beat rhythm: Problem → Insight → Result. Lead with what client GETS, not what you DO. Use active voice.",
         "duration": "15 seconds",
         "visualSuggestion": "What to show on screen during this segment"
       },
       {
-        "point": "Key selling point 2", 
+        "point": "Second selling point with proof/example. Use 'Here's the thing...' or 'Let's be honest...' transitions. Ground in real results.", 
         "duration": "15 seconds",
         "visualSuggestion": "Visual suggestion for this segment"
       },
       {
-        "point": "Key selling point 3",
+        "point": "Third selling point addressing objection or gap. Use problem-solution contrast. Be direct but not pushy.",
         "duration": "15 seconds",
         "visualSuggestion": "Visual suggestion for this segment"
       }
     ],
-    "callToAction": "Final 10-second call to action",
+    "callToAction": "Final 10-second warm invitation. Clear next step, empowering tone. NOT pushy or desperate. Use 'Let's...' or 'Ready to...' framing. Example: 'Ready to [outcome]? Let's make it happen.'",
     "totalDuration": "60 seconds",
-    "fullScript": "The complete word-for-word script combining all sections above. This should be natural, conversational, and under 90 seconds when read aloud."
+    "fullScript": "Complete word-for-word script combining all sections. MUST follow tone of voice: conversational yet confident, systematic expert energy, no corporate speak, no hype. Use short punchy sentences for emphasis, contractions for natural flow. Read aloud should feel like a trusted expert friend talking directly to you."
   },
   "sampleDocuments": [
     {
@@ -567,11 +619,20 @@ Generate comprehensive gallery content in this JSON format:
 
 IMPORTANT GUIDELINES:
 - Thumbnail prompt should be specific and ready to paste into Gemini/DALL-E/Midjourney
-- Video script should be conversational and under 90 seconds total
 - CRITICAL: If pricing tiers are provided above, the video script MUST mention the EXACT prices (e.g., "Starting at $${pricingData?.tiers?.starter?.price || pricingData?.tiers?.standard?.price || 'X'}"). Do NOT invent different prices.
 - The video script should reference the actual tier names and prices the user selected
 - Focus on client outcomes and benefits, not just features
-- Make content professional yet approachable
+
+VIDEO SCRIPT QUALITY REQUIREMENTS:
+- MUST sound like a trusted expert friend, NOT a corporate brochure
+- Use short sentences. Punchy delivery. Real talk.
+- Include contractions (you're, here's, I've, let's) for natural flow
+- The hook MUST challenge an assumption or state a surprising truth
+- Each main point should use the 3-beat rhythm: Problem → Insight → Result
+- NO generic hype words: "revolutionary," "game-changing," "cutting-edge," "seamless"
+- Ground all claims in specific outcomes (save X hours, increase Y%, deliver in Z days)
+- Call to action should be a warm invitation, not a pushy demand
+- The fullScript MUST read like natural speech - test by reading aloud
 
 CRITICAL SAMPLE DOCUMENT REQUIREMENTS (Evidence-Based Only):
 - Each document suggestion MUST be derived from the freelancer's actual skills, projects, or archetype
